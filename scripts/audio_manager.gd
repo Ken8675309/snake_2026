@@ -40,6 +40,15 @@ func play_power() -> void:
 	_play("power", 0.92 + _rng.randf() * 0.12)
 
 
+func play_life() -> void:
+	_play("life", 1.0 + _rng.randf() * 0.08)
+
+
+func play_impact() -> void:
+	_play("impact_boom", 0.94 + _rng.randf() * 0.05)
+	_play("impact_rumble", 0.96)
+
+
 func play_shield_break() -> void:
 	_play("shield", 0.96)
 
@@ -55,6 +64,9 @@ func play_start() -> void:
 func _build_players() -> void:
 	_create_player("eat", _make_tone([660.0, 990.0], 0.16, 0.28))
 	_create_player("power", _make_tone([330.0, 660.0, 1320.0], 0.32, 0.3))
+	_create_player("life", _make_tone([520.0, 880.0, 1320.0], 0.42, 0.34))
+	_create_player("impact_boom", _make_tone([72.0, 48.0, 34.0], 0.32, 0.58))
+	_create_player("impact_rumble", _make_tone([42.0, 55.0, 68.0], 1.05, 0.26))
 	_create_player("shield", _make_tone([520.0, 390.0, 260.0], 0.36, 0.32))
 	_create_player("crash", _make_tone([110.0, 72.0, 44.0], 0.55, 0.44))
 	_create_player("start", _make_tone([220.0, 330.0, 550.0], 0.42, 0.25))

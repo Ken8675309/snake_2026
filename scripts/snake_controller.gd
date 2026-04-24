@@ -35,6 +35,9 @@ var target_position: Vector3 = Vector3.ZERO
 
 var _visual_direction: Vector3 = Vector3.FORWARD
 var _distance_travelled: float = 0.0
+var _impact_scatter_time: float = 0.0
+var _impact_scatter_duration: float = 0.75
+var _impact_scatter_strength: float = 0.55
 var _path_points: Array[Vector3] = []
 var _segments: Array[Node3D] = []
 
@@ -61,7 +64,13 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not is_alive or is_paused:
+	if not is_alive:
+		return
+	if is_paused:
+		_update_body(delta)
+		_update_head_visual()
+		_update_trail()
+		_update_effect_visuals(delta)
 		return
 
 	_update_speed_input()
@@ -95,6 +104,7 @@ func reset(start_position: Vector3) -> void:
 	target_position = _grid_to_world(grid_pos)
 	_visual_direction = _grid_direction_to_vector(direction)
 	_distance_travelled = 0.0
+	_impact_scatter_time = 0.0
 
 	_head_root.global_position = target_position
 	_set_facing_direction(_visual_direction)
@@ -137,6 +147,43 @@ func has_shield() -> bool:
 
 func consume_shield() -> void:
 	shield_enabled = false
+
+
+func get_grid_position() -> Vector2i:
+	return grid_pos
+
+
+func get_grid_direction() -> Vector2i:
+	return direction
+
+
+func set_grid_direction(new_direction: Vector2i) -> void:
+	if new_direction == Vector2i.ZERO:
+		return
+	direction = new_direction
+	_visual_direction = _grid_direction_to_vector(direction)
+	direction_changed.emit(_visual_direction)
+
+
+func recover_after_impact(new_direction: Vector2i) -> void:
+	var p := _head_root.global_position
+	p.x = clampf(p.x, -arena_half_extent + cell_size, arena_half_extent - cell_size)
+	p.z = clampf(p.z, -arena_half_extent + cell_size, arena_half_extent - cell_size)
+	grid_pos = _world_to_grid(p)
+	target_position = _grid_to_world(grid_pos)
+	_head_root.global_position = target_position
+	set_grid_direction(new_direction)
+	_set_facing_direction(_grid_direction_to_vector(direction))
+	_path_points.clear()
+	for i in range(initial_segments * 3):
+		_path_points.append(target_position - _visual_direction * float(i) * segment_spacing * 0.5)
+	_impact_scatter_time = _impact_scatter_duration
+
+
+func trigger_segment_impact(strength: float = 0.55, duration: float = 0.75) -> void:
+	_impact_scatter_strength = strength
+	_impact_scatter_duration = maxf(duration, 0.1)
+	_impact_scatter_time = _impact_scatter_duration
 
 
 func deflect_from_boundary() -> void:
@@ -301,11 +348,20 @@ func _sample_path(distance_back: float) -> Vector3:
 
 
 func _update_body(delta: float) -> void:
+	_impact_scatter_time = maxf(0.0, _impact_scatter_time - delta)
+	var scatter_t := _impact_scatter_time / maxf(_impact_scatter_duration, 0.001)
 	for i in range(_segments.size()):
 		var segment := _segments[i]
 		var target_position := _sample_path(float(i + 1) * segment_spacing)
 		var wave := sin((_distance_travelled * 2.35) - float(i) * 0.58) * wave_height
 		target_position.y = body_height + wave
+		if scatter_t > 0.0:
+			var side := 1.0 if i % 2 == 0 else -1.0
+			var lateral := Vector3(-_visual_direction.z, 0.0, _visual_direction.x).normalized()
+			var falloff := 1.0 - clampf(float(i) / maxf(float(_segments.size()), 1.0), 0.0, 1.0)
+			var pulse := sin((1.0 - scatter_t) * PI)
+			target_position += lateral * side * _impact_scatter_strength * scatter_t * falloff
+			target_position += _visual_direction * -0.18 * pulse * scatter_t * falloff
 		segment.global_position = segment.global_position.lerp(target_position, clampf(18.0 * delta, 0.0, 1.0))
 
 		var look_target := _sample_path(float(i) * segment_spacing)

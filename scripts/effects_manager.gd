@@ -51,6 +51,19 @@ func power_burst(position: Vector3, color: Color) -> void:
 	impact_light(position, color, 3.2, 0.22)
 
 
+func life_burst(position: Vector3) -> void:
+	var color := Color(0.35, 0.95, 1.0)
+	particle_burst(position, color, 44, 0.72)
+	shock_ring(position, color, 0.42, 4.0, 0.38)
+	impact_light(position, color, 4.2, 0.28)
+
+
+func impact_burst(position: Vector3) -> void:
+	particle_burst(position, Color(1.0, 0.28, 0.16), 58, 0.85)
+	shock_ring(position, Color(1.0, 0.18, 0.08), 0.55, 5.4, 0.45)
+	impact_light(position, Color(1.0, 0.18, 0.08), 5.4, 0.3)
+
+
 func crash_burst(position: Vector3) -> void:
 	particle_burst(position, Color(0.95, 0.08, 0.16), 72, 1.1)
 	shock_ring(position, Color(1.0, 0.05, 0.12), 0.5, 6.2, 0.65)

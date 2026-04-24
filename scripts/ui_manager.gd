@@ -5,6 +5,7 @@ var game_manager
 
 var _score_label: Label
 var _high_score_label: Label
+var _lives_label: Label
 var _length_label: Label
 var _effects_label: Label
 var _state_label: Label
@@ -13,10 +14,12 @@ var _countdown_label: Label
 var _controls_label: Label
 var _brightness_slider: HSlider
 var _vignette: ColorRect
+var _impact_flash: ColorRect
 var _top_bar: HBoxContainer
 var _menu_root: Control
 var _start_button: Button
 var _quit_button: Button
+var _flash_alpha: float = 0.0
 
 
 func _ready() -> void:
@@ -24,7 +27,7 @@ func _ready() -> void:
 	_build_ui()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if game_manager == null or game_manager.snake == null:
 		return
 
@@ -38,11 +41,17 @@ func _process(_delta: float) -> void:
 	if effects["magnet"] > 0.0:
 		active.append("MAGNET %.0f" % effects["magnet"])
 	_effects_label.text = " / ".join(active) if not active.is_empty() else _get_status_line()
+	if _impact_flash != null and _flash_alpha > 0.0:
+		_flash_alpha = maxf(0.0, _flash_alpha - delta * 3.8)
+		_impact_flash.color = Color(1.0, 0.22, 0.08, _flash_alpha)
+		_impact_flash.visible = _flash_alpha > 0.0
 
 
 func setup(manager) -> void:
 	game_manager = manager
 	game_manager.score_changed.connect(_on_score_changed)
+	if game_manager.has_signal("lives_changed"):
+		game_manager.lives_changed.connect(_on_lives_changed)
 	game_manager.state_changed.connect(_on_state_changed)
 	game_manager.countdown_changed.connect(_on_countdown_changed)
 	_start_button.pressed.connect(game_manager.request_start_game)
@@ -50,12 +59,24 @@ func setup(manager) -> void:
 	_brightness_slider.value = game_manager.brightness
 	_brightness_slider.value_changed.connect(_on_brightness_changed)
 	_on_score_changed(game_manager.score, game_manager.high_score)
+	if game_manager.has_method("get_lives"):
+		_on_lives_changed(game_manager.get_lives(), game_manager.get_max_lives())
 	_on_state_changed("MENU")
 
 
 func _on_score_changed(score: int, high_score: int) -> void:
 	_score_label.text = "SCORE  %06d" % score
 	_high_score_label.text = "BEST  %06d" % high_score
+
+
+func _on_lives_changed(lives: int, max_lives: int) -> void:
+	_lives_label.text = "LIVES  %d/%d" % [lives, max_lives]
+
+
+func flash_impact() -> void:
+	_flash_alpha = 0.24
+	if _impact_flash != null:
+		_impact_flash.visible = true
 
 
 func _on_state_changed(state_name: String) -> void:
@@ -68,6 +89,9 @@ func _on_state_changed(state_name: String) -> void:
 	_state_label.visible = center_state_visible
 	_state_subtitle.visible = center_state_visible
 	_vignette.visible = menu_visible or center_state_visible
+	if state_name == "MENU":
+		_flash_alpha = 0.0
+		_impact_flash.visible = false
 	match state_name:
 		"MENU":
 			_state_label.text = ""
@@ -131,6 +155,14 @@ func _build_ui() -> void:
 	_vignette.visible = false
 	root.add_child(_vignette)
 
+	_impact_flash = ColorRect.new()
+	_impact_flash.name = "ImpactFlash"
+	_impact_flash.color = Color(1.0, 0.22, 0.08, 0.0)
+	_impact_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_impact_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_impact_flash.visible = false
+	root.add_child(_impact_flash)
+
 	_top_bar = HBoxContainer.new()
 	_top_bar.name = "TopBar"
 	_top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -149,6 +181,10 @@ func _build_ui() -> void:
 	_high_score_label = _make_label(18, Color(0.55, 0.82, 1.0))
 	_high_score_label.custom_minimum_size = Vector2(210.0, 34.0)
 	_top_bar.add_child(_high_score_label)
+
+	_lives_label = _make_label(18, Color(1.0, 0.84, 0.36))
+	_lives_label.custom_minimum_size = Vector2(150.0, 34.0)
+	_top_bar.add_child(_lives_label)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -279,7 +315,7 @@ func _build_menu(root: Control) -> void:
 	_menu_root.add_child(center)
 
 	var title := _make_label(56, Color(0.95, 1.0, 0.96))
-	title.text = "Neon Serpent"
+	title.text = "Python"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(title)
 

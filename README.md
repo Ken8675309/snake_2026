@@ -1,6 +1,6 @@
-# Neon Serpent
+# Python
 
-Neon Serpent is a polished procedural 3D Snake arcade project for Godot 4.x. It uses runtime-generated meshes, materials, particles, lighting, UI, and procedural audio, so there are no paid or external asset dependencies.
+Python is a polished procedural 3D Snake arcade project for Godot 4.x. It uses runtime-generated meshes, materials, particles, lighting, UI, and procedural audio, so there are no paid or external asset dependencies.
 
 ## Run On Fedora
 
