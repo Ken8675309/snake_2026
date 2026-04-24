@@ -52,9 +52,9 @@ func set_brightness(value: float) -> void:
 	default_brightness = clampf(value, 0.5, 2.0)
 	if _environment == null:
 		return
-	_environment.tonemap_exposure = 1.2 * default_brightness
-	_environment.ambient_light_energy = 0.34 * default_brightness
-	_environment.glow_intensity = 0.34 + default_brightness * 0.18
+	_environment.tonemap_exposure = 1.32 * default_brightness
+	_environment.ambient_light_energy = 0.52 * default_brightness
+	_environment.glow_intensity = 0.26 + default_brightness * 0.14
 
 
 func _clear_children() -> void:
@@ -64,38 +64,38 @@ func _clear_children() -> void:
 
 func _build_materials() -> void:
 	floor_material = StandardMaterial3D.new()
-	floor_material.albedo_color = Color(0.024, 0.026, 0.029, 1.0)
-	floor_material.metallic = 0.9
-	floor_material.roughness = 0.13
+	floor_material.albedo_color = Color(0.16, 0.17, 0.18, 1.0)
+	floor_material.metallic = 0.58
+	floor_material.roughness = 0.58
 	floor_material.emission_enabled = true
-	floor_material.emission = Color(0.006, 0.008, 0.011)
-	floor_material.emission_energy_multiplier = 0.12
+	floor_material.emission = Color(0.012, 0.014, 0.017)
+	floor_material.emission_energy_multiplier = 0.05
 	floor_material.normal_enabled = true
-	floor_material.normal_scale = 0.22
-	floor_material.normal_texture = _make_noise_texture(0.18, 5)
-	floor_material.roughness_texture = _make_noise_texture(0.075, 6)
+	floor_material.normal_scale = 0.18
+	floor_material.normal_texture = _make_noise_texture(0.16, 5)
+	floor_material.roughness_texture = _make_noise_texture(0.12, 6)
 
 	floor_plate_material = StandardMaterial3D.new()
-	floor_plate_material.albedo_color = Color(0.036, 0.039, 0.043, 1.0)
-	floor_plate_material.metallic = 0.86
-	floor_plate_material.roughness = 0.18
+	floor_plate_material.albedo_color = Color(0.2, 0.205, 0.21, 1.0)
+	floor_plate_material.metallic = 0.62
+	floor_plate_material.roughness = 0.48
 	floor_plate_material.normal_enabled = true
 	floor_plate_material.normal_scale = 0.18
 	floor_plate_material.normal_texture = _make_noise_texture(0.28, 4)
 	floor_plate_material.roughness_texture = _make_noise_texture(0.12, 5)
 
 	panel_line_material = StandardMaterial3D.new()
-	panel_line_material.albedo_color = Color(0.003, 0.004, 0.006, 1.0)
-	panel_line_material.metallic = 0.65
-	panel_line_material.roughness = 0.28
+	panel_line_material.albedo_color = Color(0.055, 0.06, 0.066, 1.0)
+	panel_line_material.metallic = 0.45
+	panel_line_material.roughness = 0.62
 	panel_line_material.emission_enabled = true
 	panel_line_material.emission = Color(0.0, 0.01, 0.014)
 	panel_line_material.emission_energy_multiplier = 0.08
 
 	rail_material = StandardMaterial3D.new()
-	rail_material.albedo_color = Color(0.009, 0.011, 0.014, 1.0)
-	rail_material.metallic = 0.88
-	rail_material.roughness = 0.2
+	rail_material.albedo_color = Color(0.105, 0.115, 0.125, 1.0)
+	rail_material.metallic = 0.62
+	rail_material.roughness = 0.42
 	rail_material.emission_enabled = true
 	rail_material.emission = Color(0.0, 0.035, 0.052)
 	rail_material.emission_energy_multiplier = 0.16
@@ -104,10 +104,10 @@ func _build_materials() -> void:
 	rail_material.normal_texture = _make_noise_texture(0.2, 4)
 
 	grid_material = StandardMaterial3D.new()
-	grid_material.albedo_color = Color(0.0, 0.58, 0.52, 0.3)
+	grid_material.albedo_color = Color(0.0, 0.44, 0.4, 0.24)
 	grid_material.emission_enabled = true
-	grid_material.emission = Color(0.0, 0.58, 0.5)
-	grid_material.emission_energy_multiplier = 0.42
+	grid_material.emission = Color(0.0, 0.46, 0.42)
+	grid_material.emission_energy_multiplier = 0.32
 	grid_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	grid_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 
@@ -120,9 +120,9 @@ func _build_materials() -> void:
 	accent_material.roughness = 0.18
 
 	dark_accent_material = StandardMaterial3D.new()
-	dark_accent_material.albedo_color = Color(0.02, 0.035, 0.05, 1.0)
+	dark_accent_material.albedo_color = Color(0.075, 0.088, 0.1, 1.0)
 	dark_accent_material.metallic = 0.7
-	dark_accent_material.roughness = 0.18
+	dark_accent_material.roughness = 0.4
 	dark_accent_material.emission_enabled = true
 	dark_accent_material.emission = Color(0.0, 0.2, 0.28)
 	dark_accent_material.emission_energy_multiplier = 0.7
@@ -142,7 +142,7 @@ func _build_materials() -> void:
 	hazard_material.emission_energy_multiplier = 0.15
 
 	rubber_material = StandardMaterial3D.new()
-	rubber_material.albedo_color = Color(0.006, 0.006, 0.007, 1.0)
+	rubber_material.albedo_color = Color(0.035, 0.036, 0.038, 1.0)
 	rubber_material.roughness = 0.58
 
 	bolt_material = StandardMaterial3D.new()
@@ -151,9 +151,9 @@ func _build_materials() -> void:
 	bolt_material.roughness = 0.16
 
 	vent_material = StandardMaterial3D.new()
-	vent_material.albedo_color = Color(0.006, 0.008, 0.01, 1.0)
+	vent_material.albedo_color = Color(0.055, 0.064, 0.074, 1.0)
 	vent_material.metallic = 0.82
-	vent_material.roughness = 0.26
+	vent_material.roughness = 0.46
 
 
 func _build_environment() -> void:
@@ -161,20 +161,20 @@ func _build_environment() -> void:
 	environment.name = "CinematicEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.004, 0.006, 0.011)
+	env.background_color = Color(0.012, 0.015, 0.022)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.045, 0.052, 0.062)
-	env.ambient_light_energy = 0.34
+	env.ambient_light_color = Color(0.115, 0.13, 0.145)
+	env.ambient_light_energy = 0.52
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.2
-	env.tonemap_white = 1.22
+	env.tonemap_exposure = 1.32
+	env.tonemap_white = 1.45
 	env.glow_enabled = true
 	env.glow_intensity = 0.5
 	env.glow_strength = 0.95
 	env.glow_bloom = 0.18
 	env.ssao_enabled = true
 	env.ssao_radius = 3.0
-	env.ssao_intensity = 1.55
+	env.ssao_intensity = 0.95
 	_environment = env
 	set_brightness(default_brightness)
 	environment.environment = env
@@ -272,8 +272,8 @@ func _build_lighting() -> void:
 	var key := DirectionalLight3D.new()
 	key.name = "KeyLight"
 	key.rotation_degrees = Vector3(-58.0, 35.0, 0.0)
-	key.light_energy = 0.58
-	key.light_color = Color(0.78, 0.84, 0.95)
+	key.light_energy = 0.74
+	key.light_color = Color(0.84, 0.88, 0.94)
 	key.shadow_enabled = true
 	add_child(key)
 
@@ -281,9 +281,17 @@ func _build_lighting() -> void:
 	fill.name = "CenterNeonFill"
 	fill.position = Vector3(0.0, 8.0, 0.0)
 	fill.light_color = Color(0.0, 0.82, 0.95)
-	fill.light_energy = 0.95
-	fill.omni_range = arena_half_extent * 0.65
+	fill.light_energy = 1.15
+	fill.omni_range = arena_half_extent * 0.85
 	add_child(fill)
+
+	var soft_fill := DirectionalLight3D.new()
+	soft_fill.name = "SoftReadabilityFill"
+	soft_fill.rotation_degrees = Vector3(-38.0, -135.0, 0.0)
+	soft_fill.light_color = Color(0.62, 0.72, 0.82)
+	soft_fill.light_energy = 0.22
+	soft_fill.shadow_enabled = false
+	add_child(soft_fill)
 
 	for i in range(4):
 		var light := OmniLight3D.new()

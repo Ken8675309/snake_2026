@@ -427,24 +427,24 @@ func _build_nodes() -> void:
 
 func _build_materials() -> void:
 	_head_material = StandardMaterial3D.new()
-	_head_material.albedo_color = Color(0.025, 0.135, 0.092, 1.0)
+	_head_material.albedo_color = Color(0.085, 0.28, 0.18, 1.0)
 	_head_material.emission_enabled = true
-	_head_material.emission = Color(0.0, 0.055, 0.035)
-	_head_material.emission_energy_multiplier = 0.18
+	_head_material.emission = Color(0.0, 0.045, 0.026)
+	_head_material.emission_energy_multiplier = 0.1
 	_head_material.metallic = 0.05
-	_head_material.roughness = 0.11
+	_head_material.roughness = 0.36
 	_head_material.normal_enabled = true
 	_head_material.normal_scale = 0.16
 	_head_material.normal_texture = _make_skin_noise_texture(0.34, 4)
 	_head_material.albedo_texture = _make_skin_noise_texture(0.18, 5)
 
 	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = Color(0.018, 0.095, 0.065, 1.0)
+	_body_material.albedo_color = Color(0.075, 0.22, 0.135, 1.0)
 	_body_material.emission_enabled = true
-	_body_material.emission = Color(0.0, 0.026, 0.018)
-	_body_material.emission_energy_multiplier = 0.08
+	_body_material.emission = Color(0.0, 0.022, 0.012)
+	_body_material.emission_energy_multiplier = 0.05
 	_body_material.metallic = 0.08
-	_body_material.roughness = 0.1
+	_body_material.roughness = 0.34
 	_body_material.normal_enabled = true
 	_body_material.normal_scale = 0.18
 	_body_material.normal_texture = _make_skin_noise_texture(0.42, 5)
@@ -452,7 +452,7 @@ func _build_materials() -> void:
 	_body_material.roughness_texture = _make_skin_noise_texture(0.22, 5)
 
 	_belly_material = StandardMaterial3D.new()
-	_belly_material.albedo_color = Color(0.08, 0.12, 0.085, 1.0)
+	_belly_material.albedo_color = Color(0.17, 0.22, 0.145, 1.0)
 	_belly_material.metallic = 0.02
 	_belly_material.roughness = 0.18
 	_belly_material.normal_enabled = true
@@ -460,7 +460,7 @@ func _build_materials() -> void:
 	_belly_material.normal_texture = _make_skin_noise_texture(0.5, 3)
 
 	_pattern_material = StandardMaterial3D.new()
-	_pattern_material.albedo_color = Color(0.004, 0.026, 0.018, 1.0)
+	_pattern_material.albedo_color = Color(0.018, 0.06, 0.035, 1.0)
 	_pattern_material.metallic = 0.04
 	_pattern_material.roughness = 0.16
 	_pattern_material.normal_enabled = true
@@ -500,8 +500,8 @@ func _update_effect_visuals(delta: float) -> void:
 		_shield_visual.scale = Vector3.ONE * pulse
 
 	var boost_energy := 1.0 if speed_multiplier > 1.05 else 0.0
-	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.18 + boost_energy * 0.85, clampf(delta * 8.0, 0.0, 1.0))
-	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.08 + boost_energy * 0.42, clampf(delta * 8.0, 0.0, 1.0))
+	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.1 + boost_energy * 0.85, clampf(delta * 8.0, 0.0, 1.0))
+	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.05 + boost_energy * 0.42, clampf(delta * 8.0, 0.0, 1.0))
 
 
 func _make_skin_noise_texture(frequency: float, octaves: int) -> NoiseTexture2D:
