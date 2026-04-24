@@ -5,19 +5,26 @@ class_name ArenaBuilder
 @export var grid_step: float = 2.0
 @export var floor_thickness: float = 0.18
 @export var floor_margin: float = 3.5
-@export var grid_line_width: float = 0.018
-@export var grid_line_height: float = 0.014
-@export var wall_height: float = 1.1
-@export var wall_thickness: float = 0.55
+@export var grid_line_width: float = 0.011
+@export var grid_line_height: float = 0.009
+@export var wall_height: float = 1.45
+@export var wall_thickness: float = 0.75
 @export var panel_step: float = 8.0
 @export var accent_spacing: float = 8.0
+@export var floor_plate_step: float = 13.0
 
 var floor_material: StandardMaterial3D
+var floor_plate_material: StandardMaterial3D
 var panel_line_material: StandardMaterial3D
 var rail_material: StandardMaterial3D
 var grid_material: StandardMaterial3D
 var accent_material: StandardMaterial3D
 var dark_accent_material: StandardMaterial3D
+var warm_light_material: StandardMaterial3D
+var hazard_material: StandardMaterial3D
+var rubber_material: StandardMaterial3D
+var bolt_material: StandardMaterial3D
+var vent_material: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -46,49 +53,58 @@ func _clear_children() -> void:
 
 func _build_materials() -> void:
 	floor_material = StandardMaterial3D.new()
-	floor_material.albedo_color = Color(0.018, 0.02, 0.026, 1.0)
-	floor_material.metallic = 0.82
-	floor_material.roughness = 0.19
+	floor_material.albedo_color = Color(0.011, 0.012, 0.014, 1.0)
+	floor_material.metallic = 0.9
+	floor_material.roughness = 0.13
 	floor_material.emission_enabled = true
-	floor_material.emission = Color(0.0, 0.012, 0.026)
-	floor_material.emission_energy_multiplier = 0.18
+	floor_material.emission = Color(0.0, 0.006, 0.012)
+	floor_material.emission_energy_multiplier = 0.08
 	floor_material.normal_enabled = true
-	floor_material.normal_scale = 0.11
-	floor_material.normal_texture = _make_noise_texture(0.085, 4)
-	floor_material.roughness_texture = _make_noise_texture(0.045, 5)
+	floor_material.normal_scale = 0.22
+	floor_material.normal_texture = _make_noise_texture(0.18, 5)
+	floor_material.roughness_texture = _make_noise_texture(0.075, 6)
+
+	floor_plate_material = StandardMaterial3D.new()
+	floor_plate_material.albedo_color = Color(0.022, 0.025, 0.028, 1.0)
+	floor_plate_material.metallic = 0.86
+	floor_plate_material.roughness = 0.18
+	floor_plate_material.normal_enabled = true
+	floor_plate_material.normal_scale = 0.18
+	floor_plate_material.normal_texture = _make_noise_texture(0.28, 4)
+	floor_plate_material.roughness_texture = _make_noise_texture(0.12, 5)
 
 	panel_line_material = StandardMaterial3D.new()
-	panel_line_material.albedo_color = Color(0.006, 0.009, 0.013, 1.0)
+	panel_line_material.albedo_color = Color(0.003, 0.004, 0.006, 1.0)
 	panel_line_material.metallic = 0.65
 	panel_line_material.roughness = 0.28
 	panel_line_material.emission_enabled = true
-	panel_line_material.emission = Color(0.0, 0.018, 0.026)
-	panel_line_material.emission_energy_multiplier = 0.18
+	panel_line_material.emission = Color(0.0, 0.01, 0.014)
+	panel_line_material.emission_energy_multiplier = 0.08
 
 	rail_material = StandardMaterial3D.new()
-	rail_material.albedo_color = Color(0.012, 0.017, 0.026, 1.0)
+	rail_material.albedo_color = Color(0.009, 0.011, 0.014, 1.0)
 	rail_material.metallic = 0.88
-	rail_material.roughness = 0.24
+	rail_material.roughness = 0.2
 	rail_material.emission_enabled = true
-	rail_material.emission = Color(0.0, 0.09, 0.15)
-	rail_material.emission_energy_multiplier = 0.38
+	rail_material.emission = Color(0.0, 0.035, 0.052)
+	rail_material.emission_energy_multiplier = 0.16
 	rail_material.normal_enabled = true
-	rail_material.normal_scale = 0.08
-	rail_material.normal_texture = _make_noise_texture(0.12, 3)
+	rail_material.normal_scale = 0.16
+	rail_material.normal_texture = _make_noise_texture(0.2, 4)
 
 	grid_material = StandardMaterial3D.new()
-	grid_material.albedo_color = Color(0.0, 0.88, 0.78, 0.74)
+	grid_material.albedo_color = Color(0.0, 0.58, 0.52, 0.3)
 	grid_material.emission_enabled = true
-	grid_material.emission = Color(0.0, 0.92, 0.78)
-	grid_material.emission_energy_multiplier = 1.45
+	grid_material.emission = Color(0.0, 0.58, 0.5)
+	grid_material.emission_energy_multiplier = 0.42
 	grid_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	grid_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 
 	accent_material = StandardMaterial3D.new()
-	accent_material.albedo_color = Color(0.95, 0.08, 0.62, 1.0)
+	accent_material.albedo_color = Color(0.04, 0.65, 0.7, 1.0)
 	accent_material.emission_enabled = true
-	accent_material.emission = Color(0.95, 0.02, 0.48)
-	accent_material.emission_energy_multiplier = 2.35
+	accent_material.emission = Color(0.0, 0.52, 0.62)
+	accent_material.emission_energy_multiplier = 1.25
 	accent_material.metallic = 0.1
 	accent_material.roughness = 0.18
 
@@ -100,23 +116,51 @@ func _build_materials() -> void:
 	dark_accent_material.emission = Color(0.0, 0.2, 0.28)
 	dark_accent_material.emission_energy_multiplier = 0.7
 
+	warm_light_material = StandardMaterial3D.new()
+	warm_light_material.albedo_color = Color(1.0, 0.42, 0.12, 1.0)
+	warm_light_material.emission_enabled = true
+	warm_light_material.emission = Color(1.0, 0.32, 0.06)
+	warm_light_material.emission_energy_multiplier = 2.15
+
+	hazard_material = StandardMaterial3D.new()
+	hazard_material.albedo_color = Color(0.95, 0.58, 0.08, 1.0)
+	hazard_material.metallic = 0.2
+	hazard_material.roughness = 0.34
+	hazard_material.emission_enabled = true
+	hazard_material.emission = Color(0.5, 0.2, 0.0)
+	hazard_material.emission_energy_multiplier = 0.15
+
+	rubber_material = StandardMaterial3D.new()
+	rubber_material.albedo_color = Color(0.006, 0.006, 0.007, 1.0)
+	rubber_material.roughness = 0.58
+
+	bolt_material = StandardMaterial3D.new()
+	bolt_material.albedo_color = Color(0.075, 0.078, 0.08, 1.0)
+	bolt_material.metallic = 0.92
+	bolt_material.roughness = 0.16
+
+	vent_material = StandardMaterial3D.new()
+	vent_material.albedo_color = Color(0.006, 0.008, 0.01, 1.0)
+	vent_material.metallic = 0.82
+	vent_material.roughness = 0.26
+
 
 func _build_environment() -> void:
 	var environment := WorldEnvironment.new()
 	environment.name = "CinematicEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.005, 0.007, 0.014)
+	env.background_color = Color(0.001, 0.002, 0.004)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.025, 0.04, 0.06)
-	env.ambient_light_energy = 0.38
+	env.ambient_light_color = Color(0.012, 0.018, 0.026)
+	env.ambient_light_energy = 0.24
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 1.18
 	env.tonemap_white = 1.18
 	env.glow_enabled = true
-	env.glow_intensity = 0.78
-	env.glow_strength = 1.22
-	env.glow_bloom = 0.26
+	env.glow_intensity = 0.5
+	env.glow_strength = 0.95
+	env.glow_bloom = 0.18
 	env.ssao_enabled = true
 	env.ssao_radius = 3.0
 	env.ssao_intensity = 1.55
@@ -136,7 +180,9 @@ func _build_floor() -> void:
 	floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(floor)
 
+	_build_floor_plates()
 	_build_floor_panel_detail()
+	_build_floor_props()
 
 	var reflection := ReflectionProbe.new()
 	reflection.name = "FloorReflectionProbe"
@@ -170,23 +216,10 @@ func _build_grid() -> void:
 
 
 func _build_boundary() -> void:
-	var rail_y := wall_height * 0.5
-	var rail_length := arena_half_extent * 2.0 + wall_thickness
-	var rail_specs := [
-		{"name": "NorthRail", "position": Vector3(0.0, rail_y, -arena_half_extent), "size": Vector3(rail_length, wall_height, wall_thickness)},
-		{"name": "SouthRail", "position": Vector3(0.0, rail_y, arena_half_extent), "size": Vector3(rail_length, wall_height, wall_thickness)},
-		{"name": "WestRail", "position": Vector3(-arena_half_extent, rail_y, 0.0), "size": Vector3(wall_thickness, wall_height, rail_length)},
-		{"name": "EastRail", "position": Vector3(arena_half_extent, rail_y, 0.0), "size": Vector3(wall_thickness, wall_height, rail_length)},
-	]
-	for spec in rail_specs:
-		var rail := MeshInstance3D.new()
-		rail.name = spec.name
-		var mesh := BoxMesh.new()
-		mesh.size = spec.size
-		rail.mesh = mesh
-		rail.position = spec.position
-		rail.material_override = rail_material
-		add_child(rail)
+	_build_modular_wall(Vector3.FORWARD, -arena_half_extent, "North")
+	_build_modular_wall(Vector3.BACK, arena_half_extent, "South")
+	_build_modular_wall(Vector3.RIGHT, -arena_half_extent, "West")
+	_build_modular_wall(Vector3.LEFT, arena_half_extent, "East")
 
 	_build_wall_accents()
 
@@ -200,22 +233,34 @@ func _build_boundary() -> void:
 		var pylon := MeshInstance3D.new()
 		pylon.name = "CornerPylon%02d" % i
 		var pylon_mesh := CylinderMesh.new()
-		pylon_mesh.top_radius = 0.32
-		pylon_mesh.bottom_radius = 0.48
-		pylon_mesh.height = 1.8
-		pylon_mesh.radial_segments = 8
+		pylon_mesh.top_radius = 0.72
+		pylon_mesh.bottom_radius = 1.05
+		pylon_mesh.height = 3.2
+		pylon_mesh.radial_segments = 10
 		pylon.mesh = pylon_mesh
 		pylon.position = corners[i]
 		pylon.material_override = accent_material
 		add_child(pylon)
+
+		var collar := MeshInstance3D.new()
+		collar.name = "CornerTowerCollar%02d" % i
+		var collar_mesh := CylinderMesh.new()
+		collar_mesh.top_radius = 1.15
+		collar_mesh.bottom_radius = 1.15
+		collar_mesh.height = 0.16
+		collar_mesh.radial_segments = 10
+		collar.mesh = collar_mesh
+		collar.position = Vector3(corners[i].x, 0.62, corners[i].z)
+		collar.material_override = rail_material
+		add_child(collar)
 
 
 func _build_lighting() -> void:
 	var key := DirectionalLight3D.new()
 	key.name = "KeyLight"
 	key.rotation_degrees = Vector3(-58.0, 35.0, 0.0)
-	key.light_energy = 0.58
-	key.light_color = Color(0.66, 0.82, 1.0)
+	key.light_energy = 0.42
+	key.light_color = Color(0.78, 0.84, 0.95)
 	key.shadow_enabled = true
 	add_child(key)
 
@@ -223,7 +268,7 @@ func _build_lighting() -> void:
 	fill.name = "CenterNeonFill"
 	fill.position = Vector3(0.0, 8.0, 0.0)
 	fill.light_color = Color(0.0, 0.82, 0.95)
-	fill.light_energy = 1.1
+	fill.light_energy = 0.7
 	fill.omni_range = arena_half_extent * 0.65
 	add_child(fill)
 
@@ -233,8 +278,8 @@ func _build_lighting() -> void:
 		var sx := -1.0 if i < 2 else 1.0
 		var sz := -1.0 if i % 2 == 0 else 1.0
 		light.position = Vector3(sx * arena_half_extent, 2.1, sz * arena_half_extent)
-		light.light_color = Color(1.0, 0.08, 0.65)
-		light.light_energy = 1.35
+		light.light_color = Color(1.0, 0.34, 0.08)
+		light.light_energy = 1.45
 		light.omni_range = 11.0
 		add_child(light)
 
@@ -254,9 +299,50 @@ func _build_lighting() -> void:
 			3:
 				light.position = Vector3(-arena_half_extent + 0.7, 1.35, -along)
 		light.light_color = Color(0.0, 0.75, 0.95)
-		light.light_energy = 0.55
-		light.omni_range = 9.0
+		light.light_energy = 0.34
+		light.omni_range = 7.5
 		add_child(light)
+
+	for i in range(12):
+		var light := OmniLight3D.new()
+		light.name = "LowAmberSideLight%02d" % i
+		var side := i % 4
+		var along := lerpf(-arena_half_extent * 0.82, arena_half_extent * 0.82, float(i / 4) / 2.0)
+		match side:
+			0:
+				light.position = Vector3(along, 0.42, -arena_half_extent + 1.25)
+			1:
+				light.position = Vector3(arena_half_extent - 1.25, 0.42, along)
+			2:
+				light.position = Vector3(-along, 0.42, arena_half_extent - 1.25)
+			3:
+				light.position = Vector3(-arena_half_extent + 1.25, 0.42, -along)
+		light.light_color = Color(1.0, 0.42, 0.12)
+		light.light_energy = 0.72
+		light.omni_range = 6.5
+		add_child(light)
+
+
+func _build_floor_plates() -> void:
+	var index := 0
+	var limit := arena_half_extent - floor_plate_step * 0.5
+	var x := -limit
+	while x <= limit + 0.01:
+		var z := -limit
+		while z <= limit + 0.01:
+			var plate := MeshInstance3D.new()
+			plate.name = "FloorPlate%02d" % index
+			var mesh := BoxMesh.new()
+			var shrink := 0.42 + float((index * 7) % 5) * 0.035
+			mesh.size = Vector3(floor_plate_step - shrink, 0.026, floor_plate_step - shrink)
+			plate.mesh = mesh
+			plate.position = Vector3(x, 0.018 + float(index % 3) * 0.002, z)
+			plate.material_override = floor_plate_material
+			plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(plate)
+			z += floor_plate_step
+			index += 1
+		x += floor_plate_step
 
 
 func _build_floor_panel_detail() -> void:
@@ -292,6 +378,160 @@ func _build_wall_accents() -> void:
 		_add_wall_accent(Vector3(arena_half_extent + 0.02, wall_height + 0.035, coordinate), Vector3(0.06, 0.055, 1.5), "EastWallAccent%02d" % index)
 		coordinate += accent_spacing
 		index += 1
+
+
+func _build_modular_wall(normal: Vector3, edge: float, wall_name: String) -> void:
+	var segment_count := int(floor((arena_half_extent * 2.0) / accent_spacing))
+	for i in range(segment_count):
+		var center := -arena_half_extent + accent_spacing * 0.5 + float(i) * accent_spacing
+		var panel := MeshInstance3D.new()
+		panel.name = "%sWallPanel%02d" % [wall_name, i]
+		var mesh := BoxMesh.new()
+		if absf(normal.z) > 0.5:
+			mesh.size = Vector3(accent_spacing - 0.36, wall_height, wall_thickness)
+			panel.position = Vector3(center, wall_height * 0.5, edge)
+		else:
+			mesh.size = Vector3(wall_thickness, wall_height, accent_spacing - 0.36)
+			panel.position = Vector3(edge, wall_height * 0.5, center)
+		panel.mesh = mesh
+		panel.material_override = rail_material
+		add_child(panel)
+
+		var rib := MeshInstance3D.new()
+		rib.name = "%sWallRib%02d" % [wall_name, i]
+		var rib_mesh := BoxMesh.new()
+		if absf(normal.z) > 0.5:
+			rib_mesh.size = Vector3(0.16, wall_height + 0.28, wall_thickness + 0.16)
+			rib.position = Vector3(center + accent_spacing * 0.47, (wall_height + 0.28) * 0.5, edge)
+		else:
+			rib_mesh.size = Vector3(wall_thickness + 0.16, wall_height + 0.28, 0.16)
+			rib.position = Vector3(edge, (wall_height + 0.28) * 0.5, center + accent_spacing * 0.47)
+		rib.mesh = rib_mesh
+		rib.material_override = dark_accent_material
+		add_child(rib)
+
+		if i % 2 == 0:
+			_add_wall_light(wall_name, i, panel.position, normal)
+
+
+func _add_wall_light(wall_name: String, index: int, base_position: Vector3, normal: Vector3) -> void:
+	var light_bar := MeshInstance3D.new()
+	light_bar.name = "%sWarmWallLight%02d" % [wall_name, index]
+	var mesh := BoxMesh.new()
+	if absf(normal.z) > 0.5:
+		mesh.size = Vector3(1.6, 0.1, 0.08)
+	else:
+		mesh.size = Vector3(0.08, 0.1, 1.6)
+	light_bar.mesh = mesh
+	light_bar.position = base_position + Vector3(0.0, -0.35, 0.0) - normal * 0.42
+	light_bar.material_override = warm_light_material
+	light_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(light_bar)
+
+
+func _build_floor_props() -> void:
+	for i in range(18):
+		var x := _deterministic_range(i, 17.0, -arena_half_extent * 0.75, arena_half_extent * 0.75)
+		var z := _deterministic_range(i, 31.0, -arena_half_extent * 0.75, arena_half_extent * 0.75)
+		if i % 3 == 0:
+			_add_vent(Vector3(x, 0.055, z), i)
+		elif i % 3 == 1:
+			_add_cable(Vector3(x, 0.075, z), i)
+		else:
+			_add_recessed_panel(Vector3(x, 0.052, z), i)
+
+	for i in range(14):
+		var along := lerpf(-arena_half_extent * 0.78, arena_half_extent * 0.78, float(i) / 13.0)
+		_add_hazard_stripe(Vector3(along, 0.08, -arena_half_extent + 2.1), i, true)
+		_add_hazard_stripe(Vector3(-arena_half_extent + 2.1, 0.08, along), i + 20, false)
+
+	for i in range(44):
+		var x := _deterministic_range(i, 47.0, -arena_half_extent * 0.9, arena_half_extent * 0.9)
+		var z := _deterministic_range(i, 71.0, -arena_half_extent * 0.9, arena_half_extent * 0.9)
+		_add_bolt(Vector3(x, 0.105, z), i)
+
+
+func _add_vent(vent_position: Vector3, index: int) -> void:
+	var base := MeshInstance3D.new()
+	base.name = "FloorVentBase%02d" % index
+	var base_mesh := BoxMesh.new()
+	base_mesh.size = Vector3(2.2, 0.04, 1.15)
+	base.mesh = base_mesh
+	base.position = vent_position
+	base.rotation_degrees.y = float((index * 37) % 90)
+	base.material_override = vent_material
+	add_child(base)
+
+	for slot_index in range(4):
+		var slot := MeshInstance3D.new()
+		slot.name = "FloorVentSlot%02d_%02d" % [index, slot_index]
+		var slot_mesh := BoxMesh.new()
+		slot_mesh.size = Vector3(1.72, 0.022, 0.055)
+		slot.mesh = slot_mesh
+		slot.position = vent_position + Vector3(0.0, 0.035, -0.36 + float(slot_index) * 0.24)
+		slot.rotation_degrees.y = base.rotation_degrees.y
+		slot.material_override = rubber_material
+		slot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(slot)
+
+
+func _add_cable(cable_position: Vector3, index: int) -> void:
+	var cable := MeshInstance3D.new()
+	cable.name = "FloorCable%02d" % index
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.12, 0.09, 3.2 + float(index % 3) * 0.8)
+	cable.mesh = mesh
+	cable.position = cable_position
+	cable.rotation_degrees.y = float((index * 29) % 180)
+	cable.material_override = rubber_material
+	add_child(cable)
+
+
+func _add_recessed_panel(panel_position: Vector3, index: int) -> void:
+	var panel := MeshInstance3D.new()
+	panel.name = "RecessedServicePanel%02d" % index
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(2.8, 0.035, 1.8)
+	panel.mesh = mesh
+	panel.position = panel_position
+	panel.rotation_degrees.y = float((index * 19) % 90)
+	panel.material_override = panel_line_material
+	add_child(panel)
+
+
+func _add_hazard_stripe(stripe_position: Vector3, index: int, horizontal: bool) -> void:
+	for stripe_index in range(3):
+		var stripe := MeshInstance3D.new()
+		stripe.name = "HazardStripe%02d_%02d" % [index, stripe_index]
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(1.0, 0.032, 0.16) if horizontal else Vector3(0.16, 0.032, 1.0)
+		stripe.mesh = mesh
+		stripe.position = stripe_position + (Vector3(0.42 * float(stripe_index), 0.0, 0.0) if horizontal else Vector3(0.0, 0.0, 0.42 * float(stripe_index)))
+		stripe.rotation_degrees.y = -24.0
+		stripe.material_override = hazard_material
+		stripe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(stripe)
+
+
+func _add_bolt(bolt_position: Vector3, index: int) -> void:
+	var bolt := MeshInstance3D.new()
+	bolt.name = "FloorBolt%02d" % index
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.09
+	mesh.bottom_radius = 0.09
+	mesh.height = 0.035
+	mesh.radial_segments = 8
+	bolt.mesh = mesh
+	bolt.position = bolt_position
+	bolt.material_override = bolt_material
+	add_child(bolt)
+
+
+func _deterministic_range(index: int, salt: float, min_value: float, max_value: float) -> float:
+	var t := fmod(sin(float(index) * 12.9898 + salt) * 43758.5453, 1.0)
+	if t < 0.0:
+		t += 1.0
+	return lerpf(min_value, max_value, t)
 
 
 func _add_wall_accent(accent_position: Vector3, accent_size: Vector3, accent_name: String) -> void:

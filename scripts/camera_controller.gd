@@ -1,12 +1,12 @@
 extends Node3D
 class_name CameraController
 
-@export var follow_distance: float = 24.0
-@export var follow_height: float = 22.0
-@export var look_ahead: float = 4.0
-@export var smoothness: float = 4.8
-@export var base_fov: float = 61.0
-@export var zoom_speed_influence: float = 1.8
+@export var follow_distance: float = 18.0
+@export var follow_height: float = 16.0
+@export var look_ahead: float = 3.2
+@export var smoothness: float = 5.4
+@export var base_fov: float = 55.0
+@export var zoom_speed_influence: float = 1.2
 @export var shake_decay: float = 7.5
 @export var target_lag: float = 5.0
 
@@ -44,7 +44,7 @@ func _process(delta: float) -> void:
 
 	var look_position := _smoothed_target_position + _get_target_forward() * look_ahead
 	look_position.y = 0.25
-	look_at(look_position, Vector3.UP)
+	look_at(look_position, Vector3.UP.normalized())
 
 	_shake_seed += delta * 34.0
 	_shake_strength = lerpf(_shake_strength, 0.0, clampf(shake_decay * delta, 0.0, 1.0))
@@ -75,7 +75,7 @@ func reset_to_target() -> void:
 		_camera.fov = base_fov
 	var look_position := _last_target_position + _get_target_forward() * look_ahead
 	look_position.y = 0.25
-	look_at(look_position, Vector3.UP)
+	look_at(look_position, Vector3.UP.normalized())
 
 
 func shake(strength: float = 0.28) -> void:

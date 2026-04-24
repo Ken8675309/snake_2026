@@ -8,16 +8,16 @@ signal direction_changed(direction: Vector3)
 @export var turn_responsiveness: float = 14.0
 @export var segment_spacing: float = 0.62
 @export var initial_segments: int = 12
-@export var segment_radius: float = 0.34
-@export var body_height: float = 0.42
+@export var segment_radius: float = 0.76
+@export var body_height: float = 0.78
 @export var arena_half_extent: float = 13.5
-@export var body_length_scale: float = 1.55
-@export var body_width_scale: float = 0.78
-@export var body_vertical_scale: float = 0.62
-@export var wave_height: float = 0.055
+@export var body_length_scale: float = 1.38
+@export var body_width_scale: float = 0.62
+@export var body_vertical_scale: float = 0.48
+@export var wave_height: float = 0.075
 @export var wave_roll_degrees: float = 4.5
-@export var head_length_scale: float = 1.48
-@export var head_width_scale: float = 1.08
+@export var head_length_scale: float = 1.26
+@export var head_width_scale: float = 0.84
 
 var is_alive: bool = true
 var is_paused: bool = false
@@ -30,7 +30,7 @@ var _visual_direction: Vector3 = Vector3.FORWARD
 var _last_cardinal_direction: Vector3 = Vector3.FORWARD
 var _distance_travelled: float = 0.0
 var _path_points: Array[Vector3] = []
-var _segments: Array[MeshInstance3D] = []
+var _segments: Array[Node3D] = []
 
 var _head_root: Node3D
 var _head_mesh: MeshInstance3D
@@ -39,6 +39,8 @@ var _trail_root: Node3D
 var _shield_visual: MeshInstance3D
 var _head_material: StandardMaterial3D
 var _body_material: StandardMaterial3D
+var _belly_material: StandardMaterial3D
+var _pattern_material: StandardMaterial3D
 var _eye_material: StandardMaterial3D
 var _trail_material: StandardMaterial3D
 var _shield_material: StandardMaterial3D
@@ -274,6 +276,10 @@ func _update_body(delta: float) -> void:
 		)
 		segment.rotation_degrees.z = sin((_distance_travelled * 2.4) - float(i) * 0.62) * wave_roll_degrees
 
+		var pattern := segment.get_node_or_null("PatternPatch") as MeshInstance3D
+		if pattern != null:
+			pattern.visible = i % 2 == 0
+
 
 func _update_head_visual() -> void:
 	var look_target := _head_root.global_position + _visual_direction
@@ -307,17 +313,52 @@ func _set_segment_count(count: int) -> void:
 		segment.queue_free()
 
 
-func _create_body_segment(index: int) -> MeshInstance3D:
-	var segment := MeshInstance3D.new()
+func _create_body_segment(index: int) -> Node3D:
+	var segment := Node3D.new()
 	segment.name = "BodySegment%02d" % index
-	var mesh := SphereMesh.new()
-	mesh.radius = 1.0
-	mesh.height = 2.0
-	mesh.radial_segments = 36
-	mesh.rings = 18
-	segment.mesh = mesh
-	segment.material_override = _body_material
-	segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+	var body_mesh := MeshInstance3D.new()
+	body_mesh.name = "CapsuleBody"
+	var capsule := CapsuleMesh.new()
+	capsule.radius = 0.88
+	capsule.height = 2.15
+	capsule.radial_segments = 32
+	capsule.rings = 12
+	body_mesh.mesh = capsule
+	body_mesh.rotation_degrees.x = 90.0
+	body_mesh.material_override = _body_material
+	body_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	segment.add_child(body_mesh)
+
+	var belly := MeshInstance3D.new()
+	belly.name = "BellyPlate"
+	var belly_mesh := CapsuleMesh.new()
+	belly_mesh.radius = 0.42
+	belly_mesh.height = 1.9
+	belly_mesh.radial_segments = 18
+	belly_mesh.rings = 8
+	belly.mesh = belly_mesh
+	belly.position = Vector3(0.0, -0.34, 0.02)
+	belly.rotation_degrees.x = 90.0
+	belly.scale = Vector3(1.0, 0.22, 0.55)
+	belly.material_override = _belly_material
+	belly.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	segment.add_child(belly)
+
+	var pattern := MeshInstance3D.new()
+	pattern.name = "PatternPatch"
+	var patch_mesh := SphereMesh.new()
+	patch_mesh.radius = 0.42
+	patch_mesh.height = 0.4
+	patch_mesh.radial_segments = 16
+	patch_mesh.rings = 8
+	pattern.mesh = patch_mesh
+	pattern.position = Vector3(0.0, 0.42, -0.12 + float(index % 3) * 0.12)
+	pattern.scale = Vector3(0.9 + float(index % 2) * 0.22, 0.18, 0.48)
+	pattern.material_override = _pattern_material
+	pattern.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	segment.add_child(pattern)
+
 	_body_root.add_child(segment)
 	return segment
 
@@ -329,12 +370,13 @@ func _build_nodes() -> void:
 
 	_head_mesh = MeshInstance3D.new()
 	_head_mesh.name = "HeadMesh"
-	var head_sphere := SphereMesh.new()
-	head_sphere.radius = 1.0
-	head_sphere.height = 2.0
-	head_sphere.radial_segments = 48
-	head_sphere.rings = 24
-	_head_mesh.mesh = head_sphere
+	var head_capsule := CapsuleMesh.new()
+	head_capsule.radius = 0.96
+	head_capsule.height = 2.15
+	head_capsule.radial_segments = 40
+	head_capsule.rings = 14
+	_head_mesh.mesh = head_capsule
+	_head_mesh.rotation_degrees.x = 90.0
 	_head_mesh.material_override = _head_material
 	_head_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_head_root.add_child(_head_mesh)
@@ -343,14 +385,14 @@ func _build_nodes() -> void:
 		var eye := MeshInstance3D.new()
 		eye.name = "Eye"
 		var eye_mesh := SphereMesh.new()
-		eye_mesh.radius = 0.07
-		eye_mesh.height = 0.14
+		eye_mesh.radius = 0.105
+		eye_mesh.height = 0.21
 		eye_mesh.radial_segments = 16
 		eye_mesh.rings = 8
 		eye.mesh = eye_mesh
 		eye.material_override = _eye_material
-		eye.position = Vector3(side * 0.19, 0.13, -0.39)
-		eye.scale = Vector3(1.0, 0.85, 1.35)
+		eye.position = Vector3(side * 0.38, 0.16, -0.72)
+		eye.scale = Vector3(1.0, 0.78, 1.25)
 		_head_root.add_child(eye)
 
 	_body_root = Node3D.new()
@@ -385,33 +427,51 @@ func _build_nodes() -> void:
 
 func _build_materials() -> void:
 	_head_material = StandardMaterial3D.new()
-	_head_material.albedo_color = Color(0.014, 0.16, 0.13, 1.0)
+	_head_material.albedo_color = Color(0.025, 0.135, 0.092, 1.0)
 	_head_material.emission_enabled = true
-	_head_material.emission = Color(0.0, 0.17, 0.13)
-	_head_material.emission_energy_multiplier = 0.55
+	_head_material.emission = Color(0.0, 0.055, 0.035)
+	_head_material.emission_energy_multiplier = 0.18
 	_head_material.metallic = 0.05
-	_head_material.roughness = 0.16
+	_head_material.roughness = 0.11
 	_head_material.normal_enabled = true
-	_head_material.normal_scale = 0.07
-	_head_material.normal_texture = _make_skin_noise_texture(0.18, 3)
+	_head_material.normal_scale = 0.16
+	_head_material.normal_texture = _make_skin_noise_texture(0.34, 4)
+	_head_material.albedo_texture = _make_skin_noise_texture(0.18, 5)
 
 	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = Color(0.012, 0.095, 0.105, 1.0)
+	_body_material.albedo_color = Color(0.018, 0.095, 0.065, 1.0)
 	_body_material.emission_enabled = true
-	_body_material.emission = Color(0.0, 0.08, 0.12)
-	_body_material.emission_energy_multiplier = 0.32
+	_body_material.emission = Color(0.0, 0.026, 0.018)
+	_body_material.emission_energy_multiplier = 0.08
 	_body_material.metallic = 0.08
-	_body_material.roughness = 0.14
+	_body_material.roughness = 0.1
 	_body_material.normal_enabled = true
-	_body_material.normal_scale = 0.09
-	_body_material.normal_texture = _make_skin_noise_texture(0.22, 4)
-	_body_material.roughness_texture = _make_skin_noise_texture(0.11, 5)
+	_body_material.normal_scale = 0.18
+	_body_material.normal_texture = _make_skin_noise_texture(0.42, 5)
+	_body_material.albedo_texture = _make_skin_noise_texture(0.16, 5)
+	_body_material.roughness_texture = _make_skin_noise_texture(0.22, 5)
+
+	_belly_material = StandardMaterial3D.new()
+	_belly_material.albedo_color = Color(0.08, 0.12, 0.085, 1.0)
+	_belly_material.metallic = 0.02
+	_belly_material.roughness = 0.18
+	_belly_material.normal_enabled = true
+	_belly_material.normal_scale = 0.08
+	_belly_material.normal_texture = _make_skin_noise_texture(0.5, 3)
+
+	_pattern_material = StandardMaterial3D.new()
+	_pattern_material.albedo_color = Color(0.004, 0.026, 0.018, 1.0)
+	_pattern_material.metallic = 0.04
+	_pattern_material.roughness = 0.16
+	_pattern_material.normal_enabled = true
+	_pattern_material.normal_scale = 0.1
+	_pattern_material.normal_texture = _make_skin_noise_texture(0.62, 4)
 
 	_eye_material = StandardMaterial3D.new()
-	_eye_material.albedo_color = Color(0.65, 1.0, 0.38, 1.0)
+	_eye_material.albedo_color = Color(1.0, 0.68, 0.2, 1.0)
 	_eye_material.emission_enabled = true
-	_eye_material.emission = Color(0.46, 1.0, 0.18)
-	_eye_material.emission_energy_multiplier = 3.4
+	_eye_material.emission = Color(1.0, 0.36, 0.04)
+	_eye_material.emission_energy_multiplier = 3.8
 	_eye_material.roughness = 0.1
 
 	_trail_material = StandardMaterial3D.new()
@@ -440,8 +500,8 @@ func _update_effect_visuals(delta: float) -> void:
 		_shield_visual.scale = Vector3.ONE * pulse
 
 	var boost_energy := 1.0 if speed_multiplier > 1.05 else 0.0
-	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.55 + boost_energy * 1.0, clampf(delta * 8.0, 0.0, 1.0))
-	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.32 + boost_energy * 0.65, clampf(delta * 8.0, 0.0, 1.0))
+	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.18 + boost_energy * 0.85, clampf(delta * 8.0, 0.0, 1.0))
+	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.08 + boost_energy * 0.42, clampf(delta * 8.0, 0.0, 1.0))
 
 
 func _make_skin_noise_texture(frequency: float, octaves: int) -> NoiseTexture2D:
