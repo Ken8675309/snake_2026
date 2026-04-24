@@ -1,19 +1,21 @@
 extends Node3D
 class_name CameraController
 
-@export var follow_distance: float = 16.5
-@export var follow_height: float = 15.0
-@export var look_ahead: float = 1.8
-@export var smoothness: float = 8.5
-@export var base_fov: float = 56.0
-@export var zoom_speed_influence: float = 1.2
+@export var follow_distance: float = 24.0
+@export var follow_height: float = 22.0
+@export var look_ahead: float = 4.0
+@export var smoothness: float = 4.8
+@export var base_fov: float = 61.0
+@export var zoom_speed_influence: float = 1.8
 @export var shake_decay: float = 7.5
+@export var target_lag: float = 5.0
 
 var target: Node3D
 var _camera: Camera3D
 var _shake_strength: float = 0.0
 var _shake_seed: float = 0.0
 var _last_target_position: Vector3 = Vector3.ZERO
+var _smoothed_target_position: Vector3 = Vector3.ZERO
 var _target_speed: float = 0.0
 
 
@@ -23,7 +25,7 @@ func _ready() -> void:
 	_camera.current = true
 	_camera.fov = base_fov
 	_camera.near = 0.05
-	_camera.far = 120.0
+	_camera.far = 260.0
 	add_child(_camera)
 
 
@@ -34,12 +36,13 @@ func _process(delta: float) -> void:
 	var target_position := _get_target_position()
 	_target_speed = lerpf(_target_speed, target_position.distance_to(_last_target_position) / maxf(delta, 0.001), 0.12)
 	_last_target_position = target_position
+	_smoothed_target_position = _smoothed_target_position.lerp(target_position, clampf(target_lag * delta, 0.0, 1.0))
 
 	var desired_offset := Vector3(0.0, follow_height, follow_distance)
-	var desired_position := target_position + desired_offset
+	var desired_position := _smoothed_target_position + desired_offset
 	global_position = global_position.lerp(desired_position, clampf(smoothness * delta, 0.0, 1.0))
 
-	var look_position := target_position + _get_target_forward() * look_ahead
+	var look_position := _smoothed_target_position + _get_target_forward() * look_ahead
 	look_position.y = 0.25
 	look_at(look_position, Vector3.UP)
 
@@ -63,6 +66,7 @@ func reset_to_target() -> void:
 	if target == null:
 		return
 	_last_target_position = _get_target_position()
+	_smoothed_target_position = _last_target_position
 	_target_speed = 0.0
 	_shake_strength = 0.0
 	global_position = _last_target_position + Vector3(0.0, follow_height, follow_distance)

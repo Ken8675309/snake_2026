@@ -11,6 +11,13 @@ signal direction_changed(direction: Vector3)
 @export var segment_radius: float = 0.34
 @export var body_height: float = 0.42
 @export var arena_half_extent: float = 13.5
+@export var body_length_scale: float = 1.55
+@export var body_width_scale: float = 0.78
+@export var body_vertical_scale: float = 0.62
+@export var wave_height: float = 0.055
+@export var wave_roll_degrees: float = 4.5
+@export var head_length_scale: float = 1.48
+@export var head_width_scale: float = 1.08
 
 var is_alive: bool = true
 var is_paused: bool = false
@@ -50,7 +57,7 @@ func _physics_process(delta: float) -> void:
 	_read_movement_input()
 	var effective_speed := move_speed * speed_multiplier
 	var old_position := _head_root.global_position
-	_visual_direction = _visual_direction.slerp(_target_direction, clampf(turn_responsiveness * delta, 0.0, 1.0)).normalized()
+	_visual_direction = _smooth_visual_direction(delta)
 	var new_position := old_position + _visual_direction * effective_speed * delta
 	new_position.y = body_height
 	_head_root.global_position = new_position
@@ -191,6 +198,28 @@ func _read_movement_input() -> void:
 	direction_changed.emit(_target_direction)
 
 
+func _smooth_visual_direction(delta: float) -> Vector3:
+	var current := _safe_direction(_visual_direction)
+	var target := _safe_direction(_target_direction)
+	var blend := clampf(turn_responsiveness * delta, 0.0, 1.0)
+	var signed_angle := current.signed_angle_to(target, Vector3.UP.normalized())
+	if absf(signed_angle) < 0.0001:
+		return target
+
+	var axis := Vector3.UP.normalized()
+	if axis.length_squared() < 0.0001:
+		axis = Vector3.UP
+	var rotated_direction := current.rotated(axis, signed_angle * blend)
+	return _safe_direction(rotated_direction)
+
+
+func _safe_direction(direction: Vector3) -> Vector3:
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		return Vector3.FORWARD
+	return direction.normalized()
+
+
 func _record_path_point(point: Vector3) -> void:
 	if _path_points.is_empty() or point.distance_to(_path_points[0]) >= 0.045:
 		_path_points.insert(0, point)
@@ -226,26 +255,37 @@ func _update_body(delta: float) -> void:
 	for i in range(_segments.size()):
 		var segment := _segments[i]
 		var target_position := _sample_path(float(i + 1) * segment_spacing)
-		var wave := sin((_distance_travelled * 2.2) - float(i) * 0.55) * 0.045
+		var wave := sin((_distance_travelled * 2.35) - float(i) * 0.58) * wave_height
 		target_position.y = body_height + wave
 		segment.global_position = segment.global_position.lerp(target_position, clampf(18.0 * delta, 0.0, 1.0))
 
 		var look_target := _sample_path(float(i) * segment_spacing)
 		look_target.y = segment.global_position.y
 		if segment.global_position.distance_squared_to(look_target) > 0.0001:
-			segment.look_at(look_target, Vector3.UP, true)
+			segment.look_at(look_target, Vector3.UP.normalized(), true)
 
 		var taper := 1.0 - clampf(float(i) / maxf(float(_segments.size()), 1.0), 0.0, 1.0) * 0.42
 		var pulse := 1.0 + sin((_distance_travelled * 3.0) - float(i) * 0.8) * 0.035
-		segment.scale = Vector3.ONE * segment_radius * taper * pulse
+		var radius := segment_radius * taper * pulse
+		segment.scale = Vector3(
+			radius * body_width_scale,
+			radius * body_vertical_scale,
+			radius * body_length_scale
+		)
+		segment.rotation_degrees.z = sin((_distance_travelled * 2.4) - float(i) * 0.62) * wave_roll_degrees
 
 
 func _update_head_visual() -> void:
 	var look_target := _head_root.global_position + _visual_direction
 	look_target.y = _head_root.global_position.y
-	_head_root.look_at(look_target, Vector3.UP, true)
+	_head_root.look_at(look_target, Vector3.UP.normalized(), true)
 	var pulse := 1.0 + sin(_distance_travelled * 3.8) * 0.025
-	_head_mesh.scale = Vector3.ONE * segment_radius * 1.22 * pulse
+	var head_radius := segment_radius * 1.2 * pulse
+	_head_mesh.scale = Vector3(
+		head_radius * head_width_scale,
+		head_radius * 0.86,
+		head_radius * head_length_scale
+	)
 
 
 func _update_trail() -> void:
@@ -273,8 +313,8 @@ func _create_body_segment(index: int) -> MeshInstance3D:
 	var mesh := SphereMesh.new()
 	mesh.radius = 1.0
 	mesh.height = 2.0
-	mesh.radial_segments = 32
-	mesh.rings = 16
+	mesh.radial_segments = 36
+	mesh.rings = 18
 	segment.mesh = mesh
 	segment.material_override = _body_material
 	segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -309,7 +349,8 @@ func _build_nodes() -> void:
 		eye_mesh.rings = 8
 		eye.mesh = eye_mesh
 		eye.material_override = _eye_material
-		eye.position = Vector3(side * 0.18, 0.12, -0.31)
+		eye.position = Vector3(side * 0.19, 0.13, -0.39)
+		eye.scale = Vector3(1.0, 0.85, 1.35)
 		_head_root.add_child(eye)
 
 	_body_root = Node3D.new()
@@ -344,26 +385,33 @@ func _build_nodes() -> void:
 
 func _build_materials() -> void:
 	_head_material = StandardMaterial3D.new()
-	_head_material.albedo_color = Color(0.05, 0.95, 0.78, 1.0)
+	_head_material.albedo_color = Color(0.014, 0.16, 0.13, 1.0)
 	_head_material.emission_enabled = true
-	_head_material.emission = Color(0.0, 0.8, 0.62)
-	_head_material.emission_energy_multiplier = 0.75
-	_head_material.metallic = 0.15
-	_head_material.roughness = 0.18
+	_head_material.emission = Color(0.0, 0.17, 0.13)
+	_head_material.emission_energy_multiplier = 0.55
+	_head_material.metallic = 0.05
+	_head_material.roughness = 0.16
+	_head_material.normal_enabled = true
+	_head_material.normal_scale = 0.07
+	_head_material.normal_texture = _make_skin_noise_texture(0.18, 3)
 
 	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = Color(0.03, 0.62, 0.92, 1.0)
+	_body_material.albedo_color = Color(0.012, 0.095, 0.105, 1.0)
 	_body_material.emission_enabled = true
-	_body_material.emission = Color(0.0, 0.35, 0.85)
-	_body_material.emission_energy_multiplier = 0.42
-	_body_material.metallic = 0.22
-	_body_material.roughness = 0.2
+	_body_material.emission = Color(0.0, 0.08, 0.12)
+	_body_material.emission_energy_multiplier = 0.32
+	_body_material.metallic = 0.08
+	_body_material.roughness = 0.14
+	_body_material.normal_enabled = true
+	_body_material.normal_scale = 0.09
+	_body_material.normal_texture = _make_skin_noise_texture(0.22, 4)
+	_body_material.roughness_texture = _make_skin_noise_texture(0.11, 5)
 
 	_eye_material = StandardMaterial3D.new()
-	_eye_material.albedo_color = Color(1.0, 0.96, 0.26, 1.0)
+	_eye_material.albedo_color = Color(0.65, 1.0, 0.38, 1.0)
 	_eye_material.emission_enabled = true
-	_eye_material.emission = Color(1.0, 0.85, 0.05)
-	_eye_material.emission_energy_multiplier = 2.4
+	_eye_material.emission = Color(0.46, 1.0, 0.18)
+	_eye_material.emission_energy_multiplier = 3.4
 	_eye_material.roughness = 0.1
 
 	_trail_material = StandardMaterial3D.new()
@@ -392,5 +440,19 @@ func _update_effect_visuals(delta: float) -> void:
 		_shield_visual.scale = Vector3.ONE * pulse
 
 	var boost_energy := 1.0 if speed_multiplier > 1.05 else 0.0
-	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.75 + boost_energy * 1.0, clampf(delta * 8.0, 0.0, 1.0))
-	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.42 + boost_energy * 0.65, clampf(delta * 8.0, 0.0, 1.0))
+	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.55 + boost_energy * 1.0, clampf(delta * 8.0, 0.0, 1.0))
+	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.32 + boost_energy * 0.65, clampf(delta * 8.0, 0.0, 1.0))
+
+
+func _make_skin_noise_texture(frequency: float, octaves: int) -> NoiseTexture2D:
+	var noise := FastNoiseLite.new()
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency = frequency
+	noise.fractal_octaves = octaves
+	noise.fractal_lacunarity = 2.0
+
+	var texture := NoiseTexture2D.new()
+	texture.width = 256
+	texture.height = 256
+	texture.noise = noise
+	return texture
