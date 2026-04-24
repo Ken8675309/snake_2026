@@ -91,7 +91,7 @@ func _make_ring(ring_name: String, radius: float) -> MeshInstance3D:
 	torus.inner_radius = radius
 	torus.outer_radius = radius + 0.035
 	torus.ring_segments = 48
-	torus.sides = 6
+	torus.rings = 6
 	ring.mesh = torus
 	ring.material_override = _material
 	return ring

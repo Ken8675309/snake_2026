@@ -5,17 +5,25 @@ signal score_changed(score: int, high_score: int)
 signal state_changed(state_name: String)
 
 const SAVE_PATH := "user://neon_serpent.cfg"
+const SnakeControllerScript := preload("res://scripts/snake_controller.gd")
+const CameraControllerScript := preload("res://scripts/camera_controller.gd")
+const ArenaBuilderScript := preload("res://scripts/arena_builder.gd")
+const EffectsManagerScript := preload("res://scripts/effects_manager.gd")
+const UIManagerScript := preload("res://scripts/ui_manager.gd")
+const AudioManagerScript := preload("res://scripts/audio_manager.gd")
+const FoodScript := preload("res://scripts/food.gd")
+const PowerUpScript := preload("res://scripts/power_up.gd")
 
 enum GameState { PLAYING, PAUSED, GAME_OVER }
 
-var snake: SnakeController
-var camera_controller: CameraController
-var arena: ArenaBuilder
-var effects: EffectsManager
-var ui_manager: UIManager
-var audio_manager: AudioManager
-var food: Food
-var power_ups: Array[PowerUp] = []
+var snake
+var camera_controller
+var arena
+var effects
+var ui_manager
+var audio_manager
+var food
+var power_ups: Array = []
 var score: int = 0
 var high_score: int = 0
 var state: GameState = GameState.PLAYING
@@ -70,30 +78,30 @@ func start_new_game() -> void:
 
 
 func _create_core_systems() -> void:
-	arena = ArenaBuilder.new()
+	arena = ArenaBuilderScript.new()
 	arena.name = "ArenaBuilder"
 	add_child(arena)
 
-	snake = SnakeController.new()
+	snake = SnakeControllerScript.new()
 	snake.name = "SnakeController"
 	snake.arena_half_extent = arena.arena_half_extent - 0.45
 	add_child(snake)
 
-	camera_controller = CameraController.new()
+	camera_controller = CameraControllerScript.new()
 	camera_controller.name = "CameraController"
 	add_child(camera_controller)
 	camera_controller.set_target(snake)
 
-	effects = EffectsManager.new()
+	effects = EffectsManagerScript.new()
 	effects.name = "EffectsManager"
 	add_child(effects)
 
-	ui_manager = UIManager.new()
+	ui_manager = UIManagerScript.new()
 	ui_manager.name = "UIManager"
 	add_child(ui_manager)
 	ui_manager.setup(self)
 
-	audio_manager = AudioManager.new()
+	audio_manager = AudioManagerScript.new()
 	audio_manager.name = "AudioManager"
 	add_child(audio_manager)
 
@@ -102,7 +110,7 @@ func _check_food_collection() -> void:
 	if food == null:
 		_spawn_food()
 		return
-	var distance := snake.get_head_position().distance_to(food.global_position)
+	var distance = snake.get_head_position().distance_to(food.global_position)
 	if distance <= food.collect_radius:
 		_collect_food()
 
@@ -126,8 +134,8 @@ func _check_collisions() -> void:
 func _collect_food() -> void:
 	if food == null:
 		return
-	var earned := food.point_value + int(snake.get_length() * 0.5)
-	var collected_position := food.global_position
+	var earned = food.point_value + int(snake.get_length() * 0.5)
+	var collected_position = food.global_position
 	score += earned
 	high_score = max(high_score, score)
 	_save_high_score()
@@ -147,7 +155,7 @@ func _update_power_ups(delta: float) -> void:
 		_next_power_up_time = run_time + _rng.randf_range(10.0, 15.0)
 
 	for i in range(power_ups.size() - 1, -1, -1):
-		var power_up := power_ups[i]
+		var power_up = power_ups[i]
 		if not is_instance_valid(power_up):
 			power_ups.remove_at(i)
 			continue
@@ -157,7 +165,7 @@ func _update_power_ups(delta: float) -> void:
 
 
 func _spawn_power_up() -> void:
-	var power_up := PowerUp.new()
+	var power_up = PowerUpScript.new()
 	power_up.name = "PowerUp"
 	var roll := _rng.randi_range(0, 3)
 	power_up.configure(roll)
@@ -166,18 +174,18 @@ func _spawn_power_up() -> void:
 	power_ups.append(power_up)
 
 
-func _collect_power_up(power_up: PowerUp) -> void:
+func _collect_power_up(power_up) -> void:
 	match power_up.power_type:
-		PowerUp.PowerType.SPEED:
+		PowerUpScript.PowerType.SPEED:
 			_effect_timers["speed"] = 7.5
 			snake.set_speed_multiplier(1.48)
-		PowerUp.PowerType.SHIELD:
+		PowerUpScript.PowerType.SHIELD:
 			_effect_timers["shield"] = 9.0
 			snake.set_shield_enabled(true)
-		PowerUp.PowerType.MAGNET:
+		PowerUpScript.PowerType.MAGNET:
 			_effect_timers["magnet"] = 10.0
 			snake.set_magnet_enabled(true)
-		PowerUp.PowerType.BONUS:
+		PowerUpScript.PowerType.BONUS:
 			score += 50
 			high_score = max(high_score, score)
 			_save_high_score()
@@ -209,7 +217,7 @@ func _update_effects(delta: float) -> void:
 func _apply_magnet(delta: float) -> void:
 	if food == null or not snake.magnet_enabled:
 		return
-	var to_snake := snake.get_head_position() - food.global_position
+	var to_snake = snake.get_head_position() - food.global_position
 	if to_snake.length() > 8.5:
 		return
 	food.global_position += to_snake.normalized() * 5.8 * delta
@@ -227,7 +235,7 @@ func _spawn_food() -> void:
 	if food != null:
 		food.queue_free()
 
-	food = Food.new()
+	food = FoodScript.new()
 	food.name = "Food"
 	add_child(food)
 	food.position = _find_clear_spawn_position()
@@ -236,7 +244,7 @@ func _spawn_food() -> void:
 
 func _find_clear_spawn_position() -> Vector3:
 	for attempt in range(80):
-		var candidate := arena.get_random_play_position(2.0)
+		var candidate = arena.get_random_play_position(2.0)
 		if candidate.distance_to(snake.get_head_position()) < 3.8:
 			continue
 		var clear := true
@@ -277,13 +285,13 @@ func _game_over(reason: String) -> void:
 
 func _get_power_up_color(power_type: int) -> Color:
 	match power_type:
-		PowerUp.PowerType.SPEED:
+		PowerUpScript.PowerType.SPEED:
 			return Color(1.0, 0.72, 0.1)
-		PowerUp.PowerType.SHIELD:
+		PowerUpScript.PowerType.SHIELD:
 			return Color(0.12, 0.6, 1.0)
-		PowerUp.PowerType.MAGNET:
+		PowerUpScript.PowerType.MAGNET:
 			return Color(0.78, 0.2, 1.0)
-		PowerUp.PowerType.BONUS:
+		PowerUpScript.PowerType.BONUS:
 			return Color(0.4, 1.0, 0.35)
 	return Color.WHITE
 

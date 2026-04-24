@@ -61,7 +61,7 @@ func _build_visual() -> void:
 	torus.inner_radius = 0.45
 	torus.outer_radius = 0.49
 	torus.ring_segments = 48
-	torus.sides = 8
+	torus.rings = 8
 	ring.mesh = torus
 	ring.material_override = _material
 	ring.rotation_degrees.x = 90.0

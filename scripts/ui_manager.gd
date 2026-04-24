@@ -1,7 +1,7 @@
 extends CanvasLayer
 class_name UIManager
 
-var game_manager: GameManager
+var game_manager
 
 var _score_label: Label
 var _high_score_label: Label
@@ -22,7 +22,7 @@ func _process(_delta: float) -> void:
 		return
 
 	_length_label.text = "LENGTH  %02d" % game_manager.snake.get_length()
-	var effects := game_manager.get_effect_status()
+	var effects = game_manager.get_effect_status()
 	var active: Array[String] = []
 	if effects["speed"] > 0.0:
 		active.append("OVERDRIVE %.0f" % effects["speed"])
@@ -33,7 +33,7 @@ func _process(_delta: float) -> void:
 	_effects_label.text = " / ".join(active) if not active.is_empty() else "SYSTEMS NOMINAL"
 
 
-func setup(manager: GameManager) -> void:
+func setup(manager) -> void:
 	game_manager = manager
 	game_manager.score_changed.connect(_on_score_changed)
 	game_manager.state_changed.connect(_on_state_changed)

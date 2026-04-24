@@ -6,7 +6,7 @@ var _timed_nodes: Array[Dictionary] = []
 
 func _process(delta: float) -> void:
 	for i in range(_timed_nodes.size() - 1, -1, -1):
-		var entry := _timed_nodes[i]
+		var entry = _timed_nodes[i]
 		var node := entry["node"] as Node3D
 		if not is_instance_valid(node):
 			_timed_nodes.remove_at(i)
@@ -100,7 +100,7 @@ func shock_ring(position: Vector3, color: Color, start_scale: float, end_scale: 
 	mesh.inner_radius = 0.92
 	mesh.outer_radius = 1.0
 	mesh.ring_segments = 72
-	mesh.sides = 6
+	mesh.rings = 6
 	ring.mesh = mesh
 
 	var mat := StandardMaterial3D.new()

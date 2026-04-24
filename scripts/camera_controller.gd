@@ -66,12 +66,12 @@ func shake(strength: float = 0.28) -> void:
 
 
 func _get_target_position() -> Vector3:
-	if target is SnakeController:
-		return (target as SnakeController).get_head_position()
+	if target.has_method("get_head_position"):
+		return target.get_head_position()
 	return target.global_position
 
 
 func _get_target_forward() -> Vector3:
-	if target is SnakeController:
-		return (target as SnakeController).get_direction()
+	if target.has_method("get_direction"):
+		return target.get_direction()
 	return -target.global_transform.basis.z

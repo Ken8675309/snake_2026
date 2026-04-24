@@ -263,7 +263,7 @@ func _set_segment_count(count: int) -> void:
 	while _segments.size() < count:
 		_segments.append(_create_body_segment(_segments.size()))
 	while _segments.size() > count:
-		var segment := _segments.pop_back()
+		var segment = _segments.pop_back()
 		segment.queue_free()
 
 
