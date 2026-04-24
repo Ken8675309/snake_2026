@@ -58,6 +58,12 @@ func _exit_tree() -> void:
 	cleanup_runtime_objects()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		cleanup_runtime_objects()
+		get_tree().quit()
+
+
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("menu_quit") and state == GameState.MENU:
 		request_quit()

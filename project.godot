@@ -8,7 +8,7 @@ config_version=5
 config/name="Neon Serpent"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.2", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon=""
 
 [display]
 

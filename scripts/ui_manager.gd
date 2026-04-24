@@ -36,7 +36,7 @@ func _process(_delta: float) -> void:
 		active.append("SHIELD %.0f" % effects["shield"])
 	if effects["magnet"] > 0.0:
 		active.append("MAGNET %.0f" % effects["magnet"])
-	_effects_label.text = " / ".join(active) if not active.is_empty() else "SYSTEMS NOMINAL"
+	_effects_label.text = " / ".join(active) if not active.is_empty() else _get_status_line()
 
 
 func setup(manager) -> void:
@@ -60,7 +60,7 @@ func _on_state_changed(state_name: String) -> void:
 	var center_state_visible := state_name == "PAUSED" or state_name == "GAME_OVER"
 	_menu_root.visible = menu_visible
 	_top_bar.visible = not menu_visible
-	_effects_label.visible = not menu_visible
+	_effects_label.visible = true
 	_countdown_label.visible = state_name == "COUNTDOWN"
 	_state_label.visible = center_state_visible
 	_state_subtitle.visible = center_state_visible
@@ -70,17 +70,20 @@ func _on_state_changed(state_name: String) -> void:
 			_state_label.text = ""
 			_state_subtitle.text = ""
 			_countdown_label.text = ""
-			_effects_label.text = ""
+			_effects_label.text = "READY TO STRIKE"
 			_start_button.grab_focus()
 		"COUNTDOWN":
 			_state_label.text = ""
 			_state_subtitle.text = ""
+			_effects_label.text = "READY TO STRIKE"
 		"PAUSED":
 			_state_label.text = "PAUSED"
 			_state_subtitle.text = "P RESUME   ESC MENU"
+			_effects_label.text = "COILED"
 		"GAME_OVER":
-			_state_label.text = "SIGNAL LOST"
+			_state_label.text = "SERPENT DOWN"
 			_state_subtitle.text = "R / ENTER RESTART   ESC MENU"
+			_effects_label.text = "VENOM SPENT"
 		_:
 			_state_label.text = ""
 			_state_subtitle.text = ""
@@ -90,6 +93,19 @@ func _on_state_changed(state_name: String) -> void:
 func _on_countdown_changed(text: String) -> void:
 	_countdown_label.text = text
 	_countdown_label.visible = not text.is_empty()
+
+
+func _get_status_line() -> String:
+	if game_manager == null:
+		return "READY TO STRIKE"
+	match game_manager.state:
+		game_manager.GameState.MENU, game_manager.GameState.COUNTDOWN:
+			return "READY TO STRIKE"
+		game_manager.GameState.PAUSED:
+			return "COILED"
+		game_manager.GameState.GAME_OVER:
+			return "VENOM SPENT"
+	return "HUNT ACTIVE"
 
 
 func _build_ui() -> void:
