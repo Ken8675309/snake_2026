@@ -11,6 +11,7 @@ var _state_label: Label
 var _state_subtitle: Label
 var _countdown_label: Label
 var _controls_label: Label
+var _brightness_slider: HSlider
 var _vignette: ColorRect
 var _top_bar: HBoxContainer
 var _menu_root: Control
@@ -46,6 +47,8 @@ func setup(manager) -> void:
 	game_manager.countdown_changed.connect(_on_countdown_changed)
 	_start_button.pressed.connect(game_manager.request_start_game)
 	_quit_button.pressed.connect(game_manager.request_quit)
+	_brightness_slider.value = game_manager.brightness
+	_brightness_slider.value_changed.connect(_on_brightness_changed)
 	_on_score_changed(game_manager.score, game_manager.high_score)
 	_on_state_changed("MENU")
 
@@ -93,6 +96,11 @@ func _on_state_changed(state_name: String) -> void:
 func _on_countdown_changed(text: String) -> void:
 	_countdown_label.text = text
 	_countdown_label.visible = not text.is_empty()
+
+
+func _on_brightness_changed(value: float) -> void:
+	if game_manager != null and game_manager.has_method("set_brightness"):
+		game_manager.set_brightness(value)
 
 
 func _get_status_line() -> String:
@@ -166,8 +174,10 @@ func _build_ui() -> void:
 	_controls_label.offset_top = -28.0
 	_controls_label.offset_bottom = -4.0
 	_controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_controls_label.text = "WASD / Arrow Keys to steer   P to pause   R to restart after game over   Esc for menu   Q quits on menu"
+	_controls_label.text = "WASD / Arrow Keys steer   Left Mouse: camera   Wheel: zoom   C: reset camera   P pause   R restart   Esc menu"
 	root.add_child(_controls_label)
+
+	_build_brightness_control(root)
 
 	_countdown_label = _make_label(96, Color(0.95, 1.0, 0.96))
 	_countdown_label.name = "CountdownLabel"
@@ -213,6 +223,36 @@ func _make_label(font_size: int, color: Color) -> Label:
 	label.add_theme_constant_override("shadow_offset_y", 2)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	return label
+
+
+func _build_brightness_control(root: Control) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "BrightnessControl"
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	panel.offset_left = -210.0
+	panel.offset_top = -94.0
+	panel.offset_right = -24.0
+	panel.offset_bottom = -42.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	panel.add_child(box)
+
+	var label := _make_label(13, Color(0.78, 0.9, 0.95))
+	label.text = "Brightness"
+	box.add_child(label)
+
+	_brightness_slider = HSlider.new()
+	_brightness_slider.min_value = 0.5
+	_brightness_slider.max_value = 2.0
+	_brightness_slider.step = 0.01
+	_brightness_slider.value = 1.2
+	_brightness_slider.custom_minimum_size = Vector2(164.0, 20.0)
+	_brightness_slider.focus_mode = Control.FOCUS_NONE
+	_brightness_slider.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.add_child(_brightness_slider)
 
 
 func _build_menu(root: Control) -> void:

@@ -6,6 +6,7 @@ signal state_changed(state_name: String)
 signal countdown_changed(text: String)
 
 const SAVE_PATH := "user://neon_serpent.cfg"
+const DEFAULT_BRIGHTNESS := 1.2
 const START_POSITION := Vector3.ZERO
 const COUNTDOWN_SECONDS := 3.0
 const GO_SECONDS := 0.65
@@ -33,6 +34,7 @@ var score: int = 0
 var high_score: int = 0
 var state: GameState = GameState.MENU
 var run_time: float = 0.0
+var brightness: float = DEFAULT_BRIGHTNESS
 
 var _rng := RandomNumberGenerator.new()
 var _next_power_up_time: float = 8.0
@@ -168,6 +170,7 @@ func start_new_game() -> void:
 func _create_core_systems() -> void:
 	arena = ArenaBuilderScript.new()
 	arena.name = "ArenaBuilder"
+	arena.default_brightness = brightness
 	add_child(arena)
 
 	snake = SnakeControllerScript.new()
@@ -192,6 +195,13 @@ func _create_core_systems() -> void:
 	audio_manager = AudioManagerScript.new()
 	audio_manager.name = "AudioManager"
 	add_child(audio_manager)
+
+
+func set_brightness(value: float) -> void:
+	brightness = clampf(value, 0.5, 2.0)
+	if arena != null and arena.has_method("set_brightness"):
+		arena.set_brightness(brightness)
+	_save_settings()
 
 
 func _check_food_collection() -> void:
@@ -445,11 +455,18 @@ func _load_high_score() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) == OK:
 		high_score = int(config.get_value("scores", "high_score", 0))
+		brightness = clampf(float(config.get_value("settings", "brightness", DEFAULT_BRIGHTNESS)), 0.5, 2.0)
 
 
 func _save_high_score() -> void:
+	_save_settings()
+
+
+func _save_settings() -> void:
 	var config := ConfigFile.new()
+	config.load(SAVE_PATH)
 	config.set_value("scores", "high_score", high_score)
+	config.set_value("settings", "brightness", brightness)
 	config.save(SAVE_PATH)
 
 

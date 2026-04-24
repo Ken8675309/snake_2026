@@ -12,6 +12,7 @@ class_name ArenaBuilder
 @export var panel_step: float = 8.0
 @export var accent_spacing: float = 8.0
 @export var floor_plate_step: float = 13.0
+@export var default_brightness: float = 1.2
 
 var floor_material: StandardMaterial3D
 var floor_plate_material: StandardMaterial3D
@@ -25,6 +26,7 @@ var hazard_material: StandardMaterial3D
 var rubber_material: StandardMaterial3D
 var bolt_material: StandardMaterial3D
 var vent_material: StandardMaterial3D
+var _environment: Environment
 
 
 func _ready() -> void:
@@ -46,6 +48,15 @@ func get_random_play_position(margin: float = 1.5) -> Vector3:
 	return Vector3(randf_range(-usable, usable), 0.48, randf_range(-usable, usable))
 
 
+func set_brightness(value: float) -> void:
+	default_brightness = clampf(value, 0.5, 2.0)
+	if _environment == null:
+		return
+	_environment.tonemap_exposure = 1.2 * default_brightness
+	_environment.ambient_light_energy = 0.34 * default_brightness
+	_environment.glow_intensity = 0.34 + default_brightness * 0.18
+
+
 func _clear_children() -> void:
 	for child in get_children():
 		child.queue_free()
@@ -53,19 +64,19 @@ func _clear_children() -> void:
 
 func _build_materials() -> void:
 	floor_material = StandardMaterial3D.new()
-	floor_material.albedo_color = Color(0.011, 0.012, 0.014, 1.0)
+	floor_material.albedo_color = Color(0.024, 0.026, 0.029, 1.0)
 	floor_material.metallic = 0.9
 	floor_material.roughness = 0.13
 	floor_material.emission_enabled = true
-	floor_material.emission = Color(0.0, 0.006, 0.012)
-	floor_material.emission_energy_multiplier = 0.08
+	floor_material.emission = Color(0.006, 0.008, 0.011)
+	floor_material.emission_energy_multiplier = 0.12
 	floor_material.normal_enabled = true
 	floor_material.normal_scale = 0.22
 	floor_material.normal_texture = _make_noise_texture(0.18, 5)
 	floor_material.roughness_texture = _make_noise_texture(0.075, 6)
 
 	floor_plate_material = StandardMaterial3D.new()
-	floor_plate_material.albedo_color = Color(0.022, 0.025, 0.028, 1.0)
+	floor_plate_material.albedo_color = Color(0.036, 0.039, 0.043, 1.0)
 	floor_plate_material.metallic = 0.86
 	floor_plate_material.roughness = 0.18
 	floor_plate_material.normal_enabled = true
@@ -150,13 +161,13 @@ func _build_environment() -> void:
 	environment.name = "CinematicEnvironment"
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.001, 0.002, 0.004)
+	env.background_color = Color(0.004, 0.006, 0.011)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.012, 0.018, 0.026)
-	env.ambient_light_energy = 0.24
+	env.ambient_light_color = Color(0.045, 0.052, 0.062)
+	env.ambient_light_energy = 0.34
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.18
-	env.tonemap_white = 1.18
+	env.tonemap_exposure = 1.2
+	env.tonemap_white = 1.22
 	env.glow_enabled = true
 	env.glow_intensity = 0.5
 	env.glow_strength = 0.95
@@ -164,6 +175,8 @@ func _build_environment() -> void:
 	env.ssao_enabled = true
 	env.ssao_radius = 3.0
 	env.ssao_intensity = 1.55
+	_environment = env
+	set_brightness(default_brightness)
 	environment.environment = env
 	add_child(environment)
 
@@ -259,7 +272,7 @@ func _build_lighting() -> void:
 	var key := DirectionalLight3D.new()
 	key.name = "KeyLight"
 	key.rotation_degrees = Vector3(-58.0, 35.0, 0.0)
-	key.light_energy = 0.42
+	key.light_energy = 0.58
 	key.light_color = Color(0.78, 0.84, 0.95)
 	key.shadow_enabled = true
 	add_child(key)
@@ -268,7 +281,7 @@ func _build_lighting() -> void:
 	fill.name = "CenterNeonFill"
 	fill.position = Vector3(0.0, 8.0, 0.0)
 	fill.light_color = Color(0.0, 0.82, 0.95)
-	fill.light_energy = 0.7
+	fill.light_energy = 0.95
 	fill.omni_range = arena_half_extent * 0.65
 	add_child(fill)
 
