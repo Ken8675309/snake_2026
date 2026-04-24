@@ -3,12 +3,11 @@ class_name SnakeController
 
 signal direction_changed(direction: Vector3)
 
-@export var move_speed: float = 7.5
-@export var boosted_speed: float = 11.0
-@export var turn_responsiveness: float = 14.0
-@export var rotation_speed: float = 2.5
-@export var forward_speed_multiplier: float = 1.12
-@export var brake_speed_multiplier: float = 0.62
+@export var base_interval: float = 0.18
+@export var cell_size: float = 1.0
+@export var forward_speed_scale: float = 1.5
+@export var brake_speed_scale: float = 0.5
+@export var visual_lerp_weight: float = 0.35
 @export var segment_spacing: float = 0.62
 @export var initial_segments: int = 12
 @export var segment_radius: float = 0.76
@@ -28,6 +27,11 @@ var speed_multiplier: float = 1.0
 var magnet_enabled: bool = false
 var shield_enabled: bool = false
 var velocity: Vector3 = Vector3.ZERO
+var grid_pos: Vector2i = Vector2i(0, 0)
+var direction: Vector2i = Vector2i(0, -1)
+var move_timer: float = 0.0
+var speed_scale: float = 1.0
+var target_position: Vector3 = Vector3.ZERO
 
 var _visual_direction: Vector3 = Vector3.FORWARD
 var _distance_travelled: float = 0.0
@@ -60,14 +64,15 @@ func _physics_process(delta: float) -> void:
 	if not is_alive or is_paused:
 		return
 
-	_update_turn_input(delta)
-	_visual_direction = _get_facing_direction()
-	var effective_speed := _get_forward_speed()
+	_update_speed_input()
+	_update_turn_input()
+	_step_grid_movement(delta)
+
 	var old_position := _head_root.global_position
-	velocity = _visual_direction * effective_speed
-	var new_position := old_position + velocity * delta
+	var new_position := old_position.lerp(target_position, visual_lerp_weight)
 	new_position.y = body_height
 	_head_root.global_position = new_position
+	velocity = (new_position - old_position) / maxf(delta, 0.001)
 	_distance_travelled += old_position.distance_to(new_position)
 	_record_path_point(new_position)
 	_update_body(delta)
@@ -83,15 +88,19 @@ func reset(start_position: Vector3) -> void:
 	magnet_enabled = false
 	shield_enabled = false
 	velocity = Vector3.ZERO
-	_visual_direction = Vector3.FORWARD
+	grid_pos = _world_to_grid(start_position)
+	direction = Vector2i(0, -1)
+	move_timer = 0.0
+	speed_scale = 1.0
+	target_position = _grid_to_world(grid_pos)
+	_visual_direction = _grid_direction_to_vector(direction)
 	_distance_travelled = 0.0
 
-	start_position.y = body_height
-	_head_root.global_position = start_position
-	_set_facing_direction(Vector3.FORWARD)
+	_head_root.global_position = target_position
+	_set_facing_direction(_visual_direction)
 	_path_points.clear()
 	for i in range(initial_segments * 3):
-		_path_points.append(start_position - Vector3.FORWARD * float(i) * segment_spacing * 0.5)
+		_path_points.append(target_position - _visual_direction * float(i) * segment_spacing * 0.5)
 
 	_set_segment_count(initial_segments)
 	for i in range(_segments.size()):
@@ -135,6 +144,8 @@ func deflect_from_boundary() -> void:
 	p.x = clampf(p.x, -arena_half_extent + 0.35, arena_half_extent - 0.35)
 	p.z = clampf(p.z, -arena_half_extent + 0.35, arena_half_extent - 0.35)
 	_head_root.global_position = p
+	grid_pos = _world_to_grid(p)
+	target_position = _grid_to_world(grid_pos)
 
 	if absf(p.x) > arena_half_extent - 0.8:
 		_set_facing_direction(Vector3.LEFT if p.x > 0.0 else Vector3.RIGHT)
@@ -183,38 +194,72 @@ func is_outside_arena(margin: float = 0.0) -> bool:
 	return absf(p.x) > arena_half_extent + margin or absf(p.z) > arena_half_extent + margin
 
 
-func _update_turn_input(delta: float) -> void:
-	var turn_input := 0.0
-	if Input.is_action_pressed("move_left"):
-		turn_input += 1.0
-	if Input.is_action_pressed("move_right"):
-		turn_input -= 1.0
+func _update_speed_input() -> void:
+	speed_scale = 1.0
+	if Input.is_action_pressed("move_up"):
+		speed_scale = forward_speed_scale
+	elif Input.is_action_pressed("move_down"):
+		speed_scale = brake_speed_scale
 
-	if turn_input == 0.0:
+
+func _update_turn_input() -> void:
+	var new_direction := direction
+	if Input.is_action_just_pressed("move_left"):
+		new_direction = _left_of(direction)
+	elif Input.is_action_just_pressed("move_right"):
+		new_direction = _right_of(direction)
+
+	if new_direction == direction or new_direction == -direction:
 		return
-	_head_root.rotate_y(turn_input * rotation_speed * delta)
-	_visual_direction = _get_facing_direction()
+	direction = new_direction
+	_visual_direction = _grid_direction_to_vector(direction)
 	direction_changed.emit(_visual_direction)
 
 
-func _get_forward_speed() -> float:
-	var speed := move_speed * speed_multiplier
-	if Input.is_action_pressed("move_up"):
-		speed *= forward_speed_multiplier
-	if Input.is_action_pressed("move_down"):
-		speed *= brake_speed_multiplier
-	return speed
-
-
-func _get_facing_direction() -> Vector3:
-	return _safe_direction(-_head_root.global_transform.basis.z)
+func _step_grid_movement(delta: float) -> void:
+	move_timer += delta
+	var interval := base_interval / maxf(speed_scale * speed_multiplier, 0.1)
+	if move_timer < interval:
+		return
+	move_timer = 0.0
+	grid_pos += direction
+	target_position = _grid_to_world(grid_pos)
+	_visual_direction = _grid_direction_to_vector(direction)
 
 
 func _set_facing_direction(direction: Vector3) -> void:
-	_visual_direction = _safe_direction(direction)
+	self.direction = _vector_to_grid_direction(direction)
+	_visual_direction = _grid_direction_to_vector(self.direction)
 	var look_target := _head_root.global_position + _visual_direction
 	look_target.y = _head_root.global_position.y
 	_head_root.look_at(look_target, Vector3.UP.normalized())
+
+
+func _left_of(grid_direction: Vector2i) -> Vector2i:
+	return Vector2i(-grid_direction.y, grid_direction.x)
+
+
+func _right_of(grid_direction: Vector2i) -> Vector2i:
+	return Vector2i(grid_direction.y, -grid_direction.x)
+
+
+func _grid_to_world(position: Vector2i) -> Vector3:
+	return Vector3(float(position.x) * cell_size, body_height, float(position.y) * cell_size)
+
+
+func _world_to_grid(position: Vector3) -> Vector2i:
+	return Vector2i(roundi(position.x / cell_size), roundi(position.z / cell_size))
+
+
+func _grid_direction_to_vector(grid_direction: Vector2i) -> Vector3:
+	return _safe_direction(Vector3(float(grid_direction.x), 0.0, float(grid_direction.y)))
+
+
+func _vector_to_grid_direction(vector_direction: Vector3) -> Vector2i:
+	var safe := _safe_direction(vector_direction)
+	if absf(safe.x) > absf(safe.z):
+		return Vector2i(1 if safe.x > 0.0 else -1, 0)
+	return Vector2i(0, 1 if safe.z > 0.0 else -1)
 
 
 func _safe_direction(direction: Vector3) -> Vector3:
