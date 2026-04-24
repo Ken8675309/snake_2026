@@ -120,12 +120,14 @@ func _build_ui() -> void:
 	var root := Control.new()
 	root.name = "HUDRoot"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	_vignette = ColorRect.new()
 	_vignette.name = "StateVignette"
 	_vignette.color = Color(0.0, 0.0, 0.0, 0.42)
 	_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vignette.visible = false
 	root.add_child(_vignette)
 
@@ -137,6 +139,7 @@ func _build_ui() -> void:
 	_top_bar.offset_right = -28.0
 	_top_bar.offset_bottom = 62.0
 	_top_bar.add_theme_constant_override("separation", 28)
+	_top_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_top_bar)
 
 	_score_label = _make_label(24, Color(0.8, 1.0, 0.96))
@@ -149,6 +152,7 @@ func _build_ui() -> void:
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_top_bar.add_child(spacer)
 
 	_length_label = _make_label(18, Color(0.55, 1.0, 0.74))
@@ -199,6 +203,7 @@ func _build_ui() -> void:
 	center.offset_right = 260.0
 	center.offset_bottom = 80.0
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(center)
 
 	_state_label = _make_label(54, Color(0.95, 1.0, 0.96))
@@ -216,6 +221,7 @@ func _build_ui() -> void:
 
 func _make_label(font_size: int, color: Color) -> Label:
 	var label := Label.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.7))
