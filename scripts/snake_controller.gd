@@ -6,6 +6,9 @@ signal direction_changed(direction: Vector3)
 @export var move_speed: float = 7.5
 @export var boosted_speed: float = 11.0
 @export var turn_responsiveness: float = 14.0
+@export var rotation_speed: float = 2.5
+@export var forward_speed_multiplier: float = 1.12
+@export var brake_speed_multiplier: float = 0.62
 @export var segment_spacing: float = 0.62
 @export var initial_segments: int = 12
 @export var segment_radius: float = 0.76
@@ -24,10 +27,9 @@ var is_paused: bool = false
 var speed_multiplier: float = 1.0
 var magnet_enabled: bool = false
 var shield_enabled: bool = false
+var velocity: Vector3 = Vector3.ZERO
 
-var _target_direction: Vector3 = Vector3.FORWARD
 var _visual_direction: Vector3 = Vector3.FORWARD
-var _last_cardinal_direction: Vector3 = Vector3.FORWARD
 var _distance_travelled: float = 0.0
 var _path_points: Array[Vector3] = []
 var _segments: Array[Node3D] = []
@@ -58,11 +60,12 @@ func _physics_process(delta: float) -> void:
 	if not is_alive or is_paused:
 		return
 
-	_read_movement_input()
-	var effective_speed := move_speed * speed_multiplier
+	_update_turn_input(delta)
+	_visual_direction = _get_facing_direction()
+	var effective_speed := _get_forward_speed()
 	var old_position := _head_root.global_position
-	_visual_direction = _smooth_visual_direction(delta)
-	var new_position := old_position + _visual_direction * effective_speed * delta
+	velocity = _visual_direction * effective_speed
+	var new_position := old_position + velocity * delta
 	new_position.y = body_height
 	_head_root.global_position = new_position
 	_distance_travelled += old_position.distance_to(new_position)
@@ -79,13 +82,13 @@ func reset(start_position: Vector3) -> void:
 	speed_multiplier = 1.0
 	magnet_enabled = false
 	shield_enabled = false
-	_target_direction = Vector3.FORWARD
+	velocity = Vector3.ZERO
 	_visual_direction = Vector3.FORWARD
-	_last_cardinal_direction = Vector3.FORWARD
 	_distance_travelled = 0.0
 
 	start_position.y = body_height
 	_head_root.global_position = start_position
+	_set_facing_direction(Vector3.FORWARD)
 	_path_points.clear()
 	for i in range(initial_segments * 3):
 		_path_points.append(start_position - Vector3.FORWARD * float(i) * segment_spacing * 0.5)
@@ -134,11 +137,9 @@ func deflect_from_boundary() -> void:
 	_head_root.global_position = p
 
 	if absf(p.x) > arena_half_extent - 0.8:
-		_target_direction = Vector3.LEFT if p.x > 0.0 else Vector3.RIGHT
+		_set_facing_direction(Vector3.LEFT if p.x > 0.0 else Vector3.RIGHT)
 	elif absf(p.z) > arena_half_extent - 0.8:
-		_target_direction = Vector3.FORWARD if p.z > 0.0 else Vector3.BACK
-	_visual_direction = _target_direction
-	_last_cardinal_direction = _target_direction
+		_set_facing_direction(Vector3.FORWARD if p.z > 0.0 else Vector3.BACK)
 	_record_path_point(p)
 
 
@@ -182,39 +183,38 @@ func is_outside_arena(margin: float = 0.0) -> bool:
 	return absf(p.x) > arena_half_extent + margin or absf(p.z) > arena_half_extent + margin
 
 
-func _read_movement_input() -> void:
-	var requested := Vector3.ZERO
+func _update_turn_input(delta: float) -> void:
+	var turn_input := 0.0
+	if Input.is_action_pressed("move_left"):
+		turn_input += 1.0
+	if Input.is_action_pressed("move_right"):
+		turn_input -= 1.0
+
+	if turn_input == 0.0:
+		return
+	_head_root.rotate_y(turn_input * rotation_speed * delta)
+	_visual_direction = _get_facing_direction()
+	direction_changed.emit(_visual_direction)
+
+
+func _get_forward_speed() -> float:
+	var speed := move_speed * speed_multiplier
 	if Input.is_action_pressed("move_up"):
-		requested = Vector3.FORWARD
-	elif Input.is_action_pressed("move_down"):
-		requested = Vector3.BACK
-	elif Input.is_action_pressed("move_left"):
-		requested = Vector3.LEFT
-	elif Input.is_action_pressed("move_right"):
-		requested = Vector3.RIGHT
-
-	if requested == Vector3.ZERO:
-		return
-	if requested.dot(_last_cardinal_direction) < -0.4:
-		return
-	_target_direction = requested.normalized()
-	_last_cardinal_direction = requested.normalized()
-	direction_changed.emit(_target_direction)
+		speed *= forward_speed_multiplier
+	if Input.is_action_pressed("move_down"):
+		speed *= brake_speed_multiplier
+	return speed
 
 
-func _smooth_visual_direction(delta: float) -> Vector3:
-	var current := _safe_direction(_visual_direction)
-	var target := _safe_direction(_target_direction)
-	var blend := clampf(turn_responsiveness * delta, 0.0, 1.0)
-	var signed_angle := current.signed_angle_to(target, Vector3.UP.normalized())
-	if absf(signed_angle) < 0.0001:
-		return target
+func _get_facing_direction() -> Vector3:
+	return _safe_direction(-_head_root.global_transform.basis.z)
 
-	var axis := Vector3.UP.normalized()
-	if axis.length_squared() < 0.0001:
-		axis = Vector3.UP
-	var rotated_direction := current.rotated(axis, signed_angle * blend)
-	return _safe_direction(rotated_direction)
+
+func _set_facing_direction(direction: Vector3) -> void:
+	_visual_direction = _safe_direction(direction)
+	var look_target := _head_root.global_position + _visual_direction
+	look_target.y = _head_root.global_position.y
+	_head_root.look_at(look_target, Vector3.UP.normalized())
 
 
 func _safe_direction(direction: Vector3) -> Vector3:
@@ -286,7 +286,7 @@ func _update_body(delta: float) -> void:
 func _update_head_visual() -> void:
 	var look_target := _head_root.global_position + _visual_direction
 	look_target.y = _head_root.global_position.y
-	_head_root.look_at(look_target, Vector3.UP.normalized(), true)
+	_head_root.look_at(look_target, Vector3.UP.normalized())
 	var pulse := 1.0 + sin(_distance_travelled * 3.8) * 0.025
 	var head_radius := segment_radius * 1.2 * pulse
 	_head_mesh.scale = Vector3(

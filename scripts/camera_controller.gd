@@ -10,11 +10,12 @@ class_name CameraController
 @export var shake_decay: float = 7.5
 @export var target_lag: float = 5.0
 @export var mouse_sensitivity: float = 0.005
-@export var wheel_zoom_step: float = 0.5
-@export var min_zoom_distance: float = 5.0
-@export var max_zoom_distance: float = 30.0
-@export var min_pitch: float = -1.2
-@export var max_pitch: float = 0.2
+@export var wheel_zoom_step: float = 1.0
+@export var min_zoom_distance: float = 3.0
+@export var max_zoom_distance: float = 60.0
+@export var min_pitch: float = -1.0
+@export var max_pitch: float = -0.1
+@export var min_camera_height: float = 1.0
 
 var target: Node3D
 var dragging: bool = false
@@ -85,6 +86,10 @@ func _process(delta: float) -> void:
 		sin(_shake_seed * 2.9)
 	) * _shake_strength
 	_camera.position = Vector3(0.0, 0.0, distance) + shake
+	if _camera.global_position.y < min_camera_height:
+		var camera_position := _camera.global_position
+		camera_position.y = min_camera_height
+		_camera.global_position = camera_position
 	_camera.fov = lerpf(_camera.fov, base_fov + minf(_target_speed * 0.08, zoom_speed_influence), clampf(4.0 * delta, 0.0, 1.0))
 
 
