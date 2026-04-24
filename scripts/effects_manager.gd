@@ -4,6 +4,10 @@ class_name EffectsManager
 var _timed_nodes: Array[Dictionary] = []
 
 
+func _exit_tree() -> void:
+	cleanup_runtime_objects()
+
+
 func _process(delta: float) -> void:
 	for i in range(_timed_nodes.size() - 1, -1, -1):
 		var entry = _timed_nodes[i]
@@ -148,3 +152,14 @@ func _track(node: Node3D, lifetime: float, kind: String) -> void:
 		"lifetime": lifetime,
 		"kind": kind,
 	})
+
+
+func cleanup_runtime_objects() -> void:
+	for entry in _timed_nodes:
+		var node := entry["node"] as Node
+		if is_instance_valid(node):
+			node.queue_free()
+	_timed_nodes.clear()
+
+	for child in get_children():
+		child.queue_free()

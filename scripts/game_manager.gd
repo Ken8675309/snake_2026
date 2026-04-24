@@ -54,7 +54,15 @@ func _ready() -> void:
 	show_main_menu()
 
 
+func _exit_tree() -> void:
+	cleanup_runtime_objects()
+
+
 func _process(delta: float) -> void:
+	if Input.is_action_just_pressed("menu_quit") and state == GameState.MENU:
+		request_quit()
+		return
+
 	if Input.is_action_just_pressed("menu_accept"):
 		if state == GameState.MENU or state == GameState.GAME_OVER:
 			start_new_game()
@@ -96,6 +104,7 @@ func request_start_game() -> void:
 
 
 func request_quit() -> void:
+	cleanup_runtime_objects()
 	get_tree().quit()
 
 
@@ -107,6 +116,10 @@ func show_main_menu() -> void:
 	_grace_time = 0.0
 	_clear_food()
 	_clear_power_ups()
+	if effects != null:
+		effects.cleanup_runtime_objects()
+	if audio_manager != null:
+		audio_manager.cleanup_runtime_objects()
 	_reset_effects()
 	if snake != null:
 		snake.reset(START_POSITION)
@@ -129,6 +142,10 @@ func start_new_game() -> void:
 	_last_countdown_text = ""
 	_clear_food()
 	_clear_power_ups()
+	if effects != null:
+		effects.cleanup_runtime_objects()
+	if audio_manager != null:
+		audio_manager.cleanup_runtime_objects()
 	_reset_effects()
 	snake.reset(START_POSITION)
 	snake.set_alive(true)
@@ -358,6 +375,15 @@ func _clear_food() -> void:
 	if food != null and is_instance_valid(food):
 		food.queue_free()
 	food = null
+
+
+func cleanup_runtime_objects() -> void:
+	_clear_food()
+	_clear_power_ups()
+	if effects != null and is_instance_valid(effects):
+		effects.cleanup_runtime_objects()
+	if audio_manager != null and is_instance_valid(audio_manager):
+		audio_manager.cleanup_runtime_objects()
 
 
 func _reset_effects() -> void:

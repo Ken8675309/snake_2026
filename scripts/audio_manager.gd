@@ -8,8 +8,28 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
-	_build_players()
-	_play_ambient()
+
+
+func _exit_tree() -> void:
+	cleanup_runtime_objects()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		cleanup_runtime_objects()
+
+
+func cleanup_runtime_objects() -> void:
+	if _ambient_player != null:
+		_ambient_player.stop()
+		_ambient_player.stream = null
+	for player_name in _players.keys():
+		var player := _players[player_name] as AudioStreamPlayer
+		if player == null:
+			continue
+		player.stop()
+		player.stream = null
+	_players.clear()
 
 
 func play_eat() -> void:
@@ -56,6 +76,9 @@ func _create_player(player_name: String, stream: AudioStreamWAV) -> void:
 
 
 func _play(player_name: String, pitch: float) -> void:
+	if _players.is_empty():
+		_build_players()
+		_play_ambient()
 	if not _players.has(player_name):
 		return
 	var player := _players[player_name] as AudioStreamPlayer

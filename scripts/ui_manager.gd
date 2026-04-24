@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	_controls_label.offset_top = -28.0
 	_controls_label.offset_bottom = -4.0
 	_controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_controls_label.text = "WASD / Arrow Keys to steer   P to pause   R to restart after game over   Esc for menu"
+	_controls_label.text = "WASD / Arrow Keys to steer   P to pause   R to restart after game over   Esc for menu   Q quits on menu"
 	root.add_child(_controls_label)
 
 	_countdown_label = _make_label(96, Color(0.95, 1.0, 0.96))
@@ -222,7 +222,7 @@ func _build_menu(root: Control) -> void:
 	center.add_child(title)
 
 	var prompt := _make_label(17, Color(0.28, 0.95, 0.9))
-	prompt.text = "ENTER START   ESC QUIT"
+	prompt.text = "ENTER / SPACE START   Q QUIT"
 	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(prompt)
 
