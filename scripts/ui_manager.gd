@@ -9,7 +9,13 @@ var _length_label: Label
 var _effects_label: Label
 var _state_label: Label
 var _state_subtitle: Label
+var _countdown_label: Label
+var _controls_label: Label
 var _vignette: ColorRect
+var _top_bar: HBoxContainer
+var _menu_root: Control
+var _start_button: Button
+var _quit_button: Button
 
 
 func _ready() -> void:
@@ -37,8 +43,11 @@ func setup(manager) -> void:
 	game_manager = manager
 	game_manager.score_changed.connect(_on_score_changed)
 	game_manager.state_changed.connect(_on_state_changed)
+	game_manager.countdown_changed.connect(_on_countdown_changed)
+	_start_button.pressed.connect(game_manager.request_start_game)
+	_quit_button.pressed.connect(game_manager.request_quit)
 	_on_score_changed(game_manager.score, game_manager.high_score)
-	_on_state_changed("PLAYING")
+	_on_state_changed("MENU")
 
 
 func _on_score_changed(score: int, high_score: int) -> void:
@@ -47,19 +56,40 @@ func _on_score_changed(score: int, high_score: int) -> void:
 
 
 func _on_state_changed(state_name: String) -> void:
-	_state_label.visible = state_name != "PLAYING"
-	_state_subtitle.visible = state_name != "PLAYING"
-	_vignette.visible = state_name != "PLAYING"
+	var menu_visible := state_name == "MENU"
+	var center_state_visible := state_name == "PAUSED" or state_name == "GAME_OVER"
+	_menu_root.visible = menu_visible
+	_top_bar.visible = not menu_visible
+	_effects_label.visible = not menu_visible
+	_countdown_label.visible = state_name == "COUNTDOWN"
+	_state_label.visible = center_state_visible
+	_state_subtitle.visible = center_state_visible
+	_vignette.visible = menu_visible or center_state_visible
 	match state_name:
+		"MENU":
+			_state_label.text = ""
+			_state_subtitle.text = ""
+			_countdown_label.text = ""
+			_effects_label.text = ""
+			_start_button.grab_focus()
+		"COUNTDOWN":
+			_state_label.text = ""
+			_state_subtitle.text = ""
 		"PAUSED":
 			_state_label.text = "PAUSED"
-			_state_subtitle.text = "RUN SUSPENDED"
+			_state_subtitle.text = "P RESUME   ESC MENU"
 		"GAME_OVER":
 			_state_label.text = "SIGNAL LOST"
-			_state_subtitle.text = "NEW RUN AVAILABLE"
+			_state_subtitle.text = "R / ENTER RESTART   ESC MENU"
 		_:
 			_state_label.text = ""
 			_state_subtitle.text = ""
+			_countdown_label.text = ""
+
+
+func _on_countdown_changed(text: String) -> void:
+	_countdown_label.text = text
+	_countdown_label.visible = not text.is_empty()
 
 
 func _build_ui() -> void:
@@ -75,32 +105,32 @@ func _build_ui() -> void:
 	_vignette.visible = false
 	root.add_child(_vignette)
 
-	var top_bar := HBoxContainer.new()
-	top_bar.name = "TopBar"
-	top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_bar.offset_left = 28.0
-	top_bar.offset_top = 22.0
-	top_bar.offset_right = -28.0
-	top_bar.offset_bottom = 62.0
-	top_bar.add_theme_constant_override("separation", 28)
-	root.add_child(top_bar)
+	_top_bar = HBoxContainer.new()
+	_top_bar.name = "TopBar"
+	_top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_top_bar.offset_left = 28.0
+	_top_bar.offset_top = 22.0
+	_top_bar.offset_right = -28.0
+	_top_bar.offset_bottom = 62.0
+	_top_bar.add_theme_constant_override("separation", 28)
+	root.add_child(_top_bar)
 
 	_score_label = _make_label(24, Color(0.8, 1.0, 0.96))
 	_score_label.custom_minimum_size = Vector2(230.0, 34.0)
-	top_bar.add_child(_score_label)
+	_top_bar.add_child(_score_label)
 
 	_high_score_label = _make_label(18, Color(0.55, 0.82, 1.0))
 	_high_score_label.custom_minimum_size = Vector2(210.0, 34.0)
-	top_bar.add_child(_high_score_label)
+	_top_bar.add_child(_high_score_label)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_bar.add_child(spacer)
+	_top_bar.add_child(spacer)
 
 	_length_label = _make_label(18, Color(0.55, 1.0, 0.74))
 	_length_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_length_label.custom_minimum_size = Vector2(160.0, 34.0)
-	top_bar.add_child(_length_label)
+	_top_bar.add_child(_length_label)
 
 	_effects_label = _make_label(16, Color(1.0, 0.82, 0.35))
 	_effects_label.name = "EffectsLabel"
@@ -111,6 +141,29 @@ func _build_ui() -> void:
 	_effects_label.offset_bottom = -20.0
 	_effects_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(_effects_label)
+
+	_controls_label = _make_label(15, Color(0.72, 0.9, 1.0))
+	_controls_label.name = "ControlsLabel"
+	_controls_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_controls_label.offset_left = 28.0
+	_controls_label.offset_right = -28.0
+	_controls_label.offset_top = -28.0
+	_controls_label.offset_bottom = -4.0
+	_controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_controls_label.text = "WASD / Arrow Keys to steer   P to pause   R to restart after game over   Esc for menu"
+	root.add_child(_controls_label)
+
+	_countdown_label = _make_label(96, Color(0.95, 1.0, 0.96))
+	_countdown_label.name = "CountdownLabel"
+	_countdown_label.set_anchors_preset(Control.PRESET_CENTER)
+	_countdown_label.offset_left = -180.0
+	_countdown_label.offset_top = -90.0
+	_countdown_label.offset_right = 180.0
+	_countdown_label.offset_bottom = 90.0
+	_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_countdown_label.visible = false
+	root.add_child(_countdown_label)
 
 	var center := VBoxContainer.new()
 	center.name = "StateCenter"
@@ -132,6 +185,8 @@ func _build_ui() -> void:
 	_state_subtitle.visible = false
 	center.add_child(_state_subtitle)
 
+	_build_menu(root)
+
 
 func _make_label(font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -142,3 +197,46 @@ func _make_label(font_size: int, color: Color) -> Label:
 	label.add_theme_constant_override("shadow_offset_y", 2)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	return label
+
+
+func _build_menu(root: Control) -> void:
+	_menu_root = Control.new()
+	_menu_root.name = "MainMenu"
+	_menu_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(_menu_root)
+
+	var center := VBoxContainer.new()
+	center.name = "MenuCenter"
+	center.set_anchors_preset(Control.PRESET_CENTER)
+	center.offset_left = -220.0
+	center.offset_top = -150.0
+	center.offset_right = 220.0
+	center.offset_bottom = 150.0
+	center.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_theme_constant_override("separation", 14)
+	_menu_root.add_child(center)
+
+	var title := _make_label(56, Color(0.95, 1.0, 0.96))
+	title.text = "Neon Serpent"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(title)
+
+	var prompt := _make_label(17, Color(0.28, 0.95, 0.9))
+	prompt.text = "ENTER START   ESC QUIT"
+	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(prompt)
+
+	_start_button = _make_button("Start Game")
+	center.add_child(_start_button)
+
+	_quit_button = _make_button("Quit")
+	center.add_child(_quit_button)
+
+
+func _make_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(220.0, 42.0)
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_size_override("font_size", 18)
+	return button

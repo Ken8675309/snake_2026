@@ -3,8 +3,13 @@ class_name GameManager
 
 signal score_changed(score: int, high_score: int)
 signal state_changed(state_name: String)
+signal countdown_changed(text: String)
 
 const SAVE_PATH := "user://neon_serpent.cfg"
+const START_POSITION := Vector3.ZERO
+const COUNTDOWN_SECONDS := 3.0
+const GO_SECONDS := 0.65
+const START_GRACE_SECONDS := 1.25
 const SnakeControllerScript := preload("res://scripts/snake_controller.gd")
 const CameraControllerScript := preload("res://scripts/camera_controller.gd")
 const ArenaBuilderScript := preload("res://scripts/arena_builder.gd")
@@ -14,7 +19,7 @@ const AudioManagerScript := preload("res://scripts/audio_manager.gd")
 const FoodScript := preload("res://scripts/food.gd")
 const PowerUpScript := preload("res://scripts/power_up.gd")
 
-enum GameState { PLAYING, PAUSED, GAME_OVER }
+enum GameState { MENU, COUNTDOWN, PLAYING, PAUSED, GAME_OVER }
 
 var snake
 var camera_controller
@@ -26,11 +31,15 @@ var food
 var power_ups: Array = []
 var score: int = 0
 var high_score: int = 0
-var state: GameState = GameState.PLAYING
+var state: GameState = GameState.MENU
 var run_time: float = 0.0
 
 var _rng := RandomNumberGenerator.new()
 var _next_power_up_time: float = 8.0
+var _countdown_time: float = 0.0
+var _go_time: float = 0.0
+var _grace_time: float = 0.0
+var _last_countdown_text: String = ""
 var _effect_timers := {
 	"speed": 0.0,
 	"shield": 0.0,
@@ -42,39 +51,95 @@ func _ready() -> void:
 	_rng.randomize()
 	_load_high_score()
 	_create_core_systems()
-	start_new_game()
+	show_main_menu()
 
 
 func _process(delta: float) -> void:
-	if Input.is_action_just_pressed("restart"):
+	if Input.is_action_just_pressed("menu_accept"):
+		if state == GameState.MENU or state == GameState.GAME_OVER:
+			start_new_game()
+		return
+
+	if Input.is_action_just_pressed("menu_back"):
+		if state == GameState.MENU:
+			request_quit()
+		else:
+			show_main_menu()
+		return
+
+	if Input.is_action_just_pressed("restart") and state == GameState.GAME_OVER:
 		start_new_game()
 		return
-	if Input.is_action_just_pressed("pause_game") and state != GameState.GAME_OVER:
+
+	if Input.is_action_just_pressed("pause_game") and (state == GameState.PLAYING or state == GameState.PAUSED):
 		_set_state(GameState.PAUSED if state == GameState.PLAYING else GameState.PLAYING)
+
+	if state == GameState.COUNTDOWN:
+		_update_countdown(delta)
+		return
 
 	if state != GameState.PLAYING:
 		return
 
 	run_time += delta
+	_grace_time = maxf(0.0, _grace_time - delta)
 	_update_effects(delta)
 	_update_power_ups(delta)
 	_apply_magnet(delta)
 	_check_food_collection()
-	_check_collisions()
+	if _grace_time <= 0.0:
+		_check_collisions()
+
+
+func request_start_game() -> void:
+	start_new_game()
+
+
+func request_quit() -> void:
+	get_tree().quit()
+
+
+func show_main_menu() -> void:
+	score = 0
+	run_time = 0.0
+	_countdown_time = 0.0
+	_go_time = 0.0
+	_grace_time = 0.0
+	_clear_food()
+	_clear_power_ups()
+	_reset_effects()
+	if snake != null:
+		snake.reset(START_POSITION)
+		snake.set_alive(true)
+		snake.set_paused(true)
+	if camera_controller != null:
+		camera_controller.reset_to_target()
+	score_changed.emit(score, high_score)
+	countdown_changed.emit("")
+	_set_state(GameState.MENU)
 
 
 func start_new_game() -> void:
 	score = 0
 	run_time = 0.0
 	_next_power_up_time = 7.5
+	_countdown_time = COUNTDOWN_SECONDS
+	_go_time = GO_SECONDS
+	_grace_time = START_GRACE_SECONDS
+	_last_countdown_text = ""
+	_clear_food()
 	_clear_power_ups()
 	_reset_effects()
-	_set_state(GameState.PLAYING)
-	snake.reset(Vector3.ZERO)
+	snake.reset(START_POSITION)
+	snake.set_alive(true)
+	snake.set_paused(true)
+	camera_controller.reset_to_target()
 	_spawn_food()
 	if audio_manager != null:
 		audio_manager.play_start()
 	score_changed.emit(score, high_score)
+	_set_state(GameState.COUNTDOWN)
+	_emit_countdown_text("3")
 
 
 func _create_core_systems() -> void:
@@ -238,14 +303,14 @@ func _spawn_food() -> void:
 	food = FoodScript.new()
 	food.name = "Food"
 	add_child(food)
-	food.position = _find_clear_spawn_position()
+	food.position = _find_clear_spawn_position(3.25, 4.6)
 	food.configure(10 + int(run_time / 18.0), Color(1.0, 0.15 + _rng.randf() * 0.2, 0.55 + _rng.randf() * 0.35))
 
 
-func _find_clear_spawn_position() -> Vector3:
+func _find_clear_spawn_position(edge_margin: float = 2.6, snake_margin: float = 3.8) -> Vector3:
 	for attempt in range(80):
-		var candidate = arena.get_random_play_position(2.0)
-		if candidate.distance_to(snake.get_head_position()) < 3.8:
+		var candidate = arena.get_random_play_position(edge_margin)
+		if candidate.distance_to(snake.get_head_position()) < snake_margin:
 			continue
 		var clear := true
 		for body_position in snake.get_body_positions():
@@ -254,7 +319,32 @@ func _find_clear_spawn_position() -> Vector3:
 				break
 		if clear:
 			return candidate
-	return arena.get_random_play_position(2.5)
+	return arena.get_random_play_position(edge_margin)
+
+
+func _update_countdown(delta: float) -> void:
+	if _countdown_time > 0.0:
+		_countdown_time = maxf(0.0, _countdown_time - delta)
+		if _countdown_time > 0.0:
+			_emit_countdown_text(str(int(ceil(_countdown_time))))
+			return
+		_emit_countdown_text("GO")
+		return
+
+	_go_time = maxf(0.0, _go_time - delta)
+	if _go_time > 0.0:
+		_emit_countdown_text("GO")
+		return
+
+	countdown_changed.emit("")
+	_set_state(GameState.PLAYING)
+
+
+func _emit_countdown_text(text: String) -> void:
+	if text == _last_countdown_text:
+		return
+	_last_countdown_text = text
+	countdown_changed.emit(text)
 
 
 func _clear_power_ups() -> void:
@@ -262,6 +352,12 @@ func _clear_power_ups() -> void:
 		if is_instance_valid(power_up):
 			power_up.queue_free()
 	power_ups.clear()
+
+
+func _clear_food() -> void:
+	if food != null and is_instance_valid(food):
+		food.queue_free()
+	food = null
 
 
 func _reset_effects() -> void:
@@ -299,8 +395,12 @@ func _get_power_up_color(power_type: int) -> Color:
 func _set_state(new_state: GameState) -> void:
 	state = new_state
 	if snake != null:
-		snake.set_paused(state == GameState.PAUSED)
+		snake.set_paused(state != GameState.PLAYING)
 	match state:
+		GameState.MENU:
+			state_changed.emit("MENU")
+		GameState.COUNTDOWN:
+			state_changed.emit("COUNTDOWN")
 		GameState.PLAYING:
 			state_changed.emit("PLAYING")
 		GameState.PAUSED:
