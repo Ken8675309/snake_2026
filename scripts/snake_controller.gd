@@ -236,11 +236,11 @@ func _set_facing_direction(direction: Vector3) -> void:
 
 
 func _left_of(grid_direction: Vector2i) -> Vector2i:
-	return Vector2i(-grid_direction.y, grid_direction.x)
+	return Vector2i(grid_direction.y, -grid_direction.x)
 
 
 func _right_of(grid_direction: Vector2i) -> Vector2i:
-	return Vector2i(grid_direction.y, -grid_direction.x)
+	return Vector2i(-grid_direction.y, grid_direction.x)
 
 
 func _grid_to_world(position: Vector2i) -> Vector3:
