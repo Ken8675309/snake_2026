@@ -242,8 +242,7 @@ func _check_food_collection() -> void:
 	if food == null:
 		_spawn_food()
 		return
-	var distance = _horizontal_distance(snake.get_head_position(), food.global_position)
-	if distance <= food.collect_radius:
+	if _is_pickup_reached(food.global_position, food.collect_radius):
 		_collect_food()
 
 
@@ -253,14 +252,14 @@ func _check_collisions() -> void:
 			_break_shield()
 			snake.deflect_from_boundary()
 			return
-		_handle_impact("Boundary breach")
+		_handle_impact("Boundary breach", true)
 		return
 	if snake.collides_with_self():
 		if snake.has_shield():
 			_break_shield()
 			snake.shrink(2)
 			return
-		_handle_impact("Signal feedback")
+		_handle_impact("Signal feedback", false)
 
 
 func _collect_food() -> void:
@@ -291,7 +290,7 @@ func _update_power_ups(delta: float) -> void:
 		if not is_instance_valid(power_up):
 			power_ups.remove_at(i)
 			continue
-		if _horizontal_distance(snake.get_head_position(), power_up.global_position) <= power_up.collect_radius:
+		if _is_pickup_reached(power_up.global_position, power_up.collect_radius):
 			_collect_power_up(power_up)
 			power_ups.remove_at(i)
 
@@ -306,7 +305,7 @@ func _update_life_eggs(delta: float) -> void:
 		if not is_instance_valid(egg):
 			life_eggs.remove_at(i)
 			continue
-		if _horizontal_distance(snake.get_head_position(), egg.global_position) <= egg.collect_radius:
+		if _is_pickup_reached(egg.global_position, egg.collect_radius):
 			_collect_life_egg(egg)
 			life_eggs.remove_at(i)
 
@@ -398,11 +397,11 @@ func _break_shield() -> void:
 	audio_manager.play_shield_break()
 
 
-func _handle_impact(reason: String) -> void:
+func _handle_impact(reason: String, barrier_hit: bool = false) -> void:
 	current_lives = maxi(current_lives - 1, 0)
 	lives_changed.emit(current_lives, max_lives)
 	var impact_position: Vector3 = snake.get_head_position()
-	camera_controller.shake(0.72)
+	camera_controller.shake(0.92 if barrier_hit else 0.72)
 	if ui_manager != null and ui_manager.has_method("flash_impact"):
 		ui_manager.flash_impact()
 	if effects != null:
@@ -410,7 +409,7 @@ func _handle_impact(reason: String) -> void:
 	if audio_manager != null:
 		audio_manager.play_impact()
 	if snake != null and snake.has_method("trigger_segment_impact"):
-		snake.trigger_segment_impact(0.72, 0.8)
+		snake.trigger_segment_impact(1.05 if barrier_hit else 0.72, 1.05 if barrier_hit else 0.8)
 
 	if current_lives <= 0:
 		_game_over(reason)
@@ -461,6 +460,22 @@ func _snap_pickup_position(position: Vector3) -> Vector3:
 
 func _horizontal_distance(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x, a.z).distance_to(Vector2(b.x, b.z))
+
+
+func _is_pickup_reached(pickup_position: Vector3, collect_radius: float) -> bool:
+	if snake == null:
+		return false
+	if snake.has_method("get_grid_position") and snake.get_grid_position() == _world_to_grid_cell(pickup_position):
+		return true
+	var forgiving_radius := maxf(collect_radius, float(snake.cell_size) * 0.72)
+	return _horizontal_distance(snake.get_head_position(), pickup_position) <= forgiving_radius
+
+
+func _world_to_grid_cell(position: Vector3) -> Vector2i:
+	var cell_size := 1.0
+	if snake != null:
+		cell_size = maxf(float(snake.cell_size), 0.001)
+	return Vector2i(roundi(position.x / cell_size), roundi(position.z / cell_size))
 
 
 func _choose_recovery_direction() -> Vector2i:

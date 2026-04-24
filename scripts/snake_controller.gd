@@ -38,6 +38,7 @@ var _distance_travelled: float = 0.0
 var _impact_scatter_time: float = 0.0
 var _impact_scatter_duration: float = 0.75
 var _impact_scatter_strength: float = 0.55
+var _impact_wobble_strength: float = 0.0
 var _path_points: Array[Vector3] = []
 var _segments: Array[Node3D] = []
 
@@ -182,6 +183,7 @@ func recover_after_impact(new_direction: Vector2i) -> void:
 
 func trigger_segment_impact(strength: float = 0.55, duration: float = 0.75) -> void:
 	_impact_scatter_strength = strength
+	_impact_wobble_strength = strength
 	_impact_scatter_duration = maxf(duration, 0.1)
 	_impact_scatter_time = _impact_scatter_duration
 
@@ -355,13 +357,21 @@ func _update_body(delta: float) -> void:
 		var target_position := _sample_path(float(i + 1) * segment_spacing)
 		var wave := sin((_distance_travelled * 2.35) - float(i) * 0.58) * wave_height
 		target_position.y = body_height + wave
+		var impact_roll := 0.0
 		if scatter_t > 0.0:
 			var side := 1.0 if i % 2 == 0 else -1.0
 			var lateral := Vector3(-_visual_direction.z, 0.0, _visual_direction.x).normalized()
 			var falloff := 1.0 - clampf(float(i) / maxf(float(_segments.size()), 1.0), 0.0, 1.0)
+			var elapsed := _impact_scatter_duration - _impact_scatter_time
+			var wobble := sin(elapsed * 31.0 + float(i) * 1.75)
+			var shake := sin(elapsed * 53.0 + float(i) * 2.4)
 			var pulse := sin((1.0 - scatter_t) * PI)
-			target_position += lateral * side * _impact_scatter_strength * scatter_t * falloff
-			target_position += _visual_direction * -0.18 * pulse * scatter_t * falloff
+			var impact := scatter_t * falloff
+			target_position += lateral * side * _impact_scatter_strength * impact
+			target_position += lateral * wobble * _impact_wobble_strength * 0.42 * impact
+			target_position += _visual_direction * ((shake * 0.28) - 0.18 * pulse) * impact
+			target_position.y += absf(shake) * _impact_wobble_strength * 0.22 * impact
+			impact_roll = wobble * _impact_wobble_strength * 19.0 * impact
 		segment.global_position = segment.global_position.lerp(target_position, clampf(18.0 * delta, 0.0, 1.0))
 
 		var look_target := _sample_path(float(i) * segment_spacing)
@@ -377,7 +387,7 @@ func _update_body(delta: float) -> void:
 			radius * body_vertical_scale,
 			radius * body_length_scale
 		)
-		segment.rotation_degrees.z = sin((_distance_travelled * 2.4) - float(i) * 0.62) * wave_roll_degrees
+		segment.rotation_degrees.z = sin((_distance_travelled * 2.4) - float(i) * 0.62) * wave_roll_degrees + impact_roll
 
 		var pattern := segment.get_node_or_null("PatternPatch") as MeshInstance3D
 		if pattern != null:
