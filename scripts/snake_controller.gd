@@ -41,7 +41,9 @@ var _head_material: StandardMaterial3D
 var _body_material: StandardMaterial3D
 var _belly_material: StandardMaterial3D
 var _pattern_material: StandardMaterial3D
+var _ring_material: StandardMaterial3D
 var _eye_material: StandardMaterial3D
+var _tongue_material: StandardMaterial3D
 var _trail_material: StandardMaterial3D
 var _shield_material: StandardMaterial3D
 
@@ -330,6 +332,14 @@ func _create_body_segment(index: int) -> Node3D:
 	body_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	segment.add_child(body_mesh)
 
+	var front_ring := _create_segment_ring("FrontRing")
+	front_ring.position = Vector3(0.0, 0.0, -0.76)
+	segment.add_child(front_ring)
+
+	var rear_ring := _create_segment_ring("RearRing")
+	rear_ring.position = Vector3(0.0, 0.0, 0.76)
+	segment.add_child(rear_ring)
+
 	var belly := MeshInstance3D.new()
 	belly.name = "BellyPlate"
 	var belly_mesh := CapsuleMesh.new()
@@ -381,6 +391,20 @@ func _build_nodes() -> void:
 	_head_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_head_root.add_child(_head_mesh)
 
+	var head_brow := MeshInstance3D.new()
+	head_brow.name = "HeadBrow"
+	var brow_mesh := SphereMesh.new()
+	brow_mesh.radius = 0.52
+	brow_mesh.height = 0.22
+	brow_mesh.radial_segments = 20
+	brow_mesh.rings = 8
+	head_brow.mesh = brow_mesh
+	head_brow.position = Vector3(0.0, 0.32, -0.48)
+	head_brow.scale = Vector3(1.25, 0.34, 0.58)
+	head_brow.material_override = _pattern_material
+	head_brow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_head_root.add_child(head_brow)
+
 	for side in [-1.0, 1.0]:
 		var eye := MeshInstance3D.new()
 		eye.name = "Eye"
@@ -394,6 +418,28 @@ func _build_nodes() -> void:
 		eye.position = Vector3(side * 0.38, 0.16, -0.72)
 		eye.scale = Vector3(1.0, 0.78, 1.25)
 		_head_root.add_child(eye)
+
+	var tongue_stem := MeshInstance3D.new()
+	tongue_stem.name = "TongueStem"
+	var tongue_mesh := BoxMesh.new()
+	tongue_mesh.size = Vector3(0.08, 0.035, 0.42)
+	tongue_stem.mesh = tongue_mesh
+	tongue_stem.position = Vector3(0.0, -0.1, -0.98)
+	tongue_stem.material_override = _tongue_material
+	tongue_stem.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_head_root.add_child(tongue_stem)
+
+	for side in [-1.0, 1.0]:
+		var fork := MeshInstance3D.new()
+		fork.name = "TongueFork"
+		var fork_mesh := BoxMesh.new()
+		fork_mesh.size = Vector3(0.045, 0.028, 0.22)
+		fork.mesh = fork_mesh
+		fork.position = Vector3(side * 0.06, -0.1, -1.28)
+		fork.rotation_degrees.y = side * 24.0
+		fork.material_override = _tongue_material
+		fork.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_head_root.add_child(fork)
 
 	_body_root = Node3D.new()
 	_body_root.name = "Body"
@@ -427,24 +473,20 @@ func _build_nodes() -> void:
 
 func _build_materials() -> void:
 	_head_material = StandardMaterial3D.new()
-	_head_material.albedo_color = Color(0.085, 0.28, 0.18, 1.0)
-	_head_material.emission_enabled = true
-	_head_material.emission = Color(0.0, 0.045, 0.026)
-	_head_material.emission_energy_multiplier = 0.1
+	_head_material.albedo_color = Color(0.18, 0.56, 0.2, 1.0)
+	_head_material.emission_enabled = false
 	_head_material.metallic = 0.05
-	_head_material.roughness = 0.36
+	_head_material.roughness = 0.32
 	_head_material.normal_enabled = true
 	_head_material.normal_scale = 0.16
 	_head_material.normal_texture = _make_skin_noise_texture(0.34, 4)
 	_head_material.albedo_texture = _make_skin_noise_texture(0.18, 5)
 
 	_body_material = StandardMaterial3D.new()
-	_body_material.albedo_color = Color(0.075, 0.22, 0.135, 1.0)
-	_body_material.emission_enabled = true
-	_body_material.emission = Color(0.0, 0.022, 0.012)
-	_body_material.emission_energy_multiplier = 0.05
+	_body_material.albedo_color = Color(0.16, 0.48, 0.18, 1.0)
+	_body_material.emission_enabled = false
 	_body_material.metallic = 0.08
-	_body_material.roughness = 0.34
+	_body_material.roughness = 0.36
 	_body_material.normal_enabled = true
 	_body_material.normal_scale = 0.18
 	_body_material.normal_texture = _make_skin_noise_texture(0.42, 5)
@@ -452,44 +494,48 @@ func _build_materials() -> void:
 	_body_material.roughness_texture = _make_skin_noise_texture(0.22, 5)
 
 	_belly_material = StandardMaterial3D.new()
-	_belly_material.albedo_color = Color(0.17, 0.22, 0.145, 1.0)
+	_belly_material.albedo_color = Color(0.88, 0.82, 0.42, 1.0)
 	_belly_material.metallic = 0.02
-	_belly_material.roughness = 0.18
+	_belly_material.roughness = 0.42
 	_belly_material.normal_enabled = true
 	_belly_material.normal_scale = 0.08
 	_belly_material.normal_texture = _make_skin_noise_texture(0.5, 3)
 
 	_pattern_material = StandardMaterial3D.new()
-	_pattern_material.albedo_color = Color(0.018, 0.06, 0.035, 1.0)
+	_pattern_material.albedo_color = Color(0.045, 0.18, 0.07, 1.0)
 	_pattern_material.metallic = 0.04
-	_pattern_material.roughness = 0.16
+	_pattern_material.roughness = 0.38
 	_pattern_material.normal_enabled = true
 	_pattern_material.normal_scale = 0.1
 	_pattern_material.normal_texture = _make_skin_noise_texture(0.62, 4)
 
+	_ring_material = StandardMaterial3D.new()
+	_ring_material.albedo_color = Color(0.1, 0.34, 0.13, 1.0)
+	_ring_material.metallic = 0.04
+	_ring_material.roughness = 0.44
+
 	_eye_material = StandardMaterial3D.new()
-	_eye_material.albedo_color = Color(1.0, 0.68, 0.2, 1.0)
-	_eye_material.emission_enabled = true
-	_eye_material.emission = Color(1.0, 0.36, 0.04)
-	_eye_material.emission_energy_multiplier = 3.8
-	_eye_material.roughness = 0.1
+	_eye_material.albedo_color = Color(0.08, 0.055, 0.025, 1.0)
+	_eye_material.emission_enabled = false
+	_eye_material.roughness = 0.08
+
+	_tongue_material = StandardMaterial3D.new()
+	_tongue_material.albedo_color = Color(0.95, 0.16, 0.18, 1.0)
+	_tongue_material.roughness = 0.5
 
 	_trail_material = StandardMaterial3D.new()
-	_trail_material.albedo_color = Color(0.0, 0.95, 0.9, 0.25)
-	_trail_material.emission_enabled = true
-	_trail_material.emission = Color(0.0, 0.65, 0.9)
-	_trail_material.emission_energy_multiplier = 0.55
+	_trail_material.albedo_color = Color(0.12, 0.24, 0.08, 0.18)
+	_trail_material.emission_enabled = false
 	_trail_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_trail_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_trail_material.blend_mode = BaseMaterial3D.BLEND_MODE_MIX
 	_trail_material.no_depth_test = false
 
 	_shield_material = StandardMaterial3D.new()
-	_shield_material.albedo_color = Color(0.15, 0.65, 1.0, 0.22)
-	_shield_material.emission_enabled = true
-	_shield_material.emission = Color(0.1, 0.62, 1.0)
-	_shield_material.emission_energy_multiplier = 0.95
+	_shield_material.albedo_color = Color(0.75, 0.9, 1.0, 0.18)
+	_shield_material.emission_enabled = false
+	_shield_material.roughness = 0.18
 	_shield_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_shield_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_shield_material.blend_mode = BaseMaterial3D.BLEND_MODE_MIX
 
 
 func _update_effect_visuals(delta: float) -> void:
@@ -500,8 +546,23 @@ func _update_effect_visuals(delta: float) -> void:
 		_shield_visual.scale = Vector3.ONE * pulse
 
 	var boost_energy := 1.0 if speed_multiplier > 1.05 else 0.0
-	_head_material.emission_energy_multiplier = lerpf(_head_material.emission_energy_multiplier, 0.1 + boost_energy * 0.85, clampf(delta * 8.0, 0.0, 1.0))
-	_body_material.emission_energy_multiplier = lerpf(_body_material.emission_energy_multiplier, 0.05 + boost_energy * 0.42, clampf(delta * 8.0, 0.0, 1.0))
+	_head_material.roughness = lerpf(_head_material.roughness, 0.32 - boost_energy * 0.08, clampf(delta * 8.0, 0.0, 1.0))
+	_body_material.roughness = lerpf(_body_material.roughness, 0.36 - boost_energy * 0.08, clampf(delta * 8.0, 0.0, 1.0))
+
+
+func _create_segment_ring(ring_name: String) -> MeshInstance3D:
+	var ring := MeshInstance3D.new()
+	ring.name = ring_name
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = 0.86
+	ring_mesh.bottom_radius = 0.86
+	ring_mesh.height = 0.09
+	ring_mesh.radial_segments = 32
+	ring.mesh = ring_mesh
+	ring.rotation_degrees.x = 90.0
+	ring.material_override = _ring_material
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return ring
 
 
 func _make_skin_noise_texture(frequency: float, octaves: int) -> NoiseTexture2D:

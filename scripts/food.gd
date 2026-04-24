@@ -3,17 +3,17 @@ class_name Food
 
 @export var point_value: int = 10
 @export var collect_radius: float = 0.82
-@export var bob_height: float = 0.18
-@export var bob_speed: float = 3.6
+@export var bob_height: float = 0.16
+@export var bob_speed: float = 3.2
 
-var _base_y: float = 0.55
+var _base_y: float = 0.65
 var _time: float = 0.0
-var _mesh: MeshInstance3D
-var _halo: MeshInstance3D
-var _inner_ring: MeshInstance3D
-var _light: OmniLight3D
-var _aura: GPUParticles3D
-var _material: StandardMaterial3D
+var _fruit: MeshInstance3D
+var _stem: MeshInstance3D
+var _leaf: MeshInstance3D
+var _fruit_material: StandardMaterial3D
+var _stem_material: StandardMaterial3D
+var _leaf_material: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -23,111 +23,76 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	rotation.y += delta * 1.8
+	rotation.y += delta * 0.95
 	position.y = _base_y + sin(_time * bob_speed) * bob_height
-	var pulse := 1.0 + sin(_time * 5.8) * 0.08
-	_mesh.scale = Vector3.ONE * pulse
-	_halo.rotation.z += delta * 1.35
-	_inner_ring.rotation.x += delta * 2.1
-	_light.light_energy = 1.7 + sin(_time * 5.8) * 0.35
+	var pulse := 1.0 + sin(_time * 4.0) * 0.035
+	_fruit.scale = Vector3(1.0, 0.92, 1.0) * pulse
 
 
 func configure(value: int, color: Color) -> void:
 	point_value = value
-	if _material == null:
-		_build_material(color)
+	if _fruit_material == null:
+		_build_materials(color)
 	else:
-		_material.albedo_color = color
-		_material.emission = color
-	if _light != null:
-		_light.light_color = color
-	if _aura != null:
-		var process := _aura.process_material as ParticleProcessMaterial
-		process.color = color
+		_fruit_material.albedo_color = color.lerp(Color(0.95, 0.18, 0.12), 0.45)
 
 
 func _build_visual() -> void:
-	if _mesh != null:
+	if _fruit != null:
 		return
-	if _material == null:
-		_build_material(Color(1.0, 0.18, 0.5))
+	if _fruit_material == null:
+		_build_materials(Color(0.95, 0.18, 0.12))
 
-	_mesh = MeshInstance3D.new()
-	_mesh.name = "FoodCore"
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.34
-	sphere.height = 0.68
-	sphere.radial_segments = 32
-	sphere.rings = 16
-	_mesh.mesh = sphere
-	_mesh.material_override = _material
-	add_child(_mesh)
+	_fruit = MeshInstance3D.new()
+	_fruit.name = "FruitBody"
+	var fruit_mesh := SphereMesh.new()
+	fruit_mesh.radius = 0.38
+	fruit_mesh.height = 0.74
+	fruit_mesh.radial_segments = 28
+	fruit_mesh.rings = 14
+	_fruit.mesh = fruit_mesh
+	_fruit.scale = Vector3(1.0, 0.92, 1.0)
+	_fruit.material_override = _fruit_material
+	add_child(_fruit)
 
-	_halo = MeshInstance3D.new()
-	_halo.name = "FoodHalo"
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.45
-	torus.outer_radius = 0.49
-	torus.ring_segments = 48
-	torus.rings = 8
-	_halo.mesh = torus
-	_halo.material_override = _material
-	_halo.rotation_degrees.x = 90.0
-	add_child(_halo)
+	_stem = MeshInstance3D.new()
+	_stem.name = "FruitStem"
+	var stem_mesh := CylinderMesh.new()
+	stem_mesh.top_radius = 0.035
+	stem_mesh.bottom_radius = 0.045
+	stem_mesh.height = 0.24
+	stem_mesh.radial_segments = 8
+	_stem.mesh = stem_mesh
+	_stem.position = Vector3(0.0, 0.42, 0.0)
+	_stem.rotation_degrees.z = 10.0
+	_stem.material_override = _stem_material
+	add_child(_stem)
 
-	_inner_ring = MeshInstance3D.new()
-	_inner_ring.name = "FoodInnerRing"
-	var inner_torus := TorusMesh.new()
-	inner_torus.inner_radius = 0.28
-	inner_torus.outer_radius = 0.305
-	inner_torus.ring_segments = 40
-	inner_torus.rings = 6
-	_inner_ring.mesh = inner_torus
-	_inner_ring.material_override = _material
-	_inner_ring.rotation_degrees.z = 90.0
-	add_child(_inner_ring)
-
-	_light = OmniLight3D.new()
-	_light.name = "FoodLight"
-	_light.light_color = _material.emission
-	_light.light_energy = 1.8
-	_light.omni_range = 5.3
-	add_child(_light)
-
-	_aura = GPUParticles3D.new()
-	_aura.name = "FoodAura"
-	_aura.amount = 28
-	_aura.lifetime = 1.35
-	_aura.preprocess = 1.35
-	_aura.randomness = 0.72
-	_aura.local_coords = true
-	_aura.emitting = true
-	var process := ParticleProcessMaterial.new()
-	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	process.emission_sphere_radius = 0.5
-	process.direction = Vector3.UP
-	process.spread = 180.0
-	process.initial_velocity_min = 0.08
-	process.initial_velocity_max = 0.38
-	process.gravity = Vector3.ZERO
-	process.scale_min = 0.018
-	process.scale_max = 0.055
-	process.color = _material.emission
-	_aura.process_material = process
-	var draw_mesh := SphereMesh.new()
-	draw_mesh.radius = 0.055
-	draw_mesh.height = 0.11
-	draw_mesh.radial_segments = 8
-	draw_mesh.rings = 4
-	_aura.draw_pass_1 = draw_mesh
-	add_child(_aura)
+	_leaf = MeshInstance3D.new()
+	_leaf.name = "FruitLeaf"
+	var leaf_mesh := SphereMesh.new()
+	leaf_mesh.radius = 0.16
+	leaf_mesh.height = 0.08
+	leaf_mesh.radial_segments = 12
+	leaf_mesh.rings = 6
+	_leaf.mesh = leaf_mesh
+	_leaf.position = Vector3(0.12, 0.47, 0.02)
+	_leaf.scale = Vector3(1.45, 0.28, 0.65)
+	_leaf.rotation_degrees = Vector3(0.0, 18.0, -28.0)
+	_leaf.material_override = _leaf_material
+	add_child(_leaf)
 
 
-func _build_material(color: Color) -> void:
-	_material = StandardMaterial3D.new()
-	_material.albedo_color = color
-	_material.emission_enabled = true
-	_material.emission = color
-	_material.emission_energy_multiplier = 2.7
-	_material.metallic = 0.1
-	_material.roughness = 0.12
+func _build_materials(color: Color) -> void:
+	_fruit_material = StandardMaterial3D.new()
+	_fruit_material.albedo_color = color.lerp(Color(0.95, 0.18, 0.12), 0.45)
+	_fruit_material.metallic = 0.0
+	_fruit_material.roughness = 0.38
+
+	_stem_material = StandardMaterial3D.new()
+	_stem_material.albedo_color = Color(0.35, 0.2, 0.08)
+	_stem_material.roughness = 0.62
+
+	_leaf_material = StandardMaterial3D.new()
+	_leaf_material.albedo_color = Color(0.26, 0.58, 0.2)
+	_leaf_material.roughness = 0.55

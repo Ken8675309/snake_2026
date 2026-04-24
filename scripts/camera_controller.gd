@@ -1,18 +1,18 @@
 extends Node3D
 class_name CameraController
 
-@export var follow_distance: float = 18.0
-@export var follow_height: float = 16.0
+@export var follow_distance: float = 15.5
+@export var follow_height: float = 13.5
 @export var look_ahead: float = 3.2
 @export var smoothness: float = 5.4
-@export var base_fov: float = 55.0
+@export var base_fov: float = 52.0
 @export var zoom_speed_influence: float = 1.2
 @export var shake_decay: float = 7.5
 @export var target_lag: float = 5.0
 @export var mouse_sensitivity: float = 0.008
 @export var wheel_zoom_step: float = 1.8
-@export var min_zoom_distance: float = 10.0
-@export var max_zoom_distance: float = 42.0
+@export var min_zoom_distance: float = 8.5
+@export var max_zoom_distance: float = 34.0
 @export var min_pitch_degrees: float = 24.0
 @export var max_pitch_degrees: float = 68.0
 
